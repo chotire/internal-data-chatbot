@@ -1,0 +1,33 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+
+# Secrets
+.env
+
+# Local tool state
+.bkit/
+
+# Chrome 익스텐션 서명키 / 패키지 (절대 커밋 금지)
+*.pem
+*.crx
+*.zip
+
+# Node (테스트 — Playwright)
+node_modules/
+tests/package-lock.json
+playwright-report/
+test-results/
+coverage/
