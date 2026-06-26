@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Chrome 자체 호스팅 업데이트 매니페스트 (크롬 웹스토어/사내 스토어 불필요).
+
+  - appid   : 익스텐션 ID. packed .crx 의 ID 또는 manifest.json 의 "key" 로 고정한 ID.
+  - codebase: 사내 HTTPS 에 업로드한 .crx 의 절대 URL.
+  - version : extension/manifest.json 의 "version" 과 반드시 일치.
+
+  버전 올릴 때: 새 .crx 업로드 → 아래 version/codebase 갱신 →
+  force-install 된 익스텐션이 크롬의 주기적 업데이트 체크 때 자동 갱신됨.
+-->
+<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
+  <app appid="EXTENSION_ID_HERE">
+    <updatecheck codebase="https://intranet.example.com/udc/udc-0.2.0.crx"
+                 version="0.2.0" />
+  </app>
+</gupdate>

@@ -1,0 +1,77 @@
+:root {
+  --bg: #0f1419; --surface: #1a2029; --surface-2: #232b36;
+  --border: #2c3540; --text: #e4e8ee; --text-dim: #8a93a0; --accent: #3b82f6;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex; flex-direction: column;
+  font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  background: var(--surface); color: var(--text);
+}
+
+.chat-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 14px; background: #0b0f14; font-size: 13px;
+  border-bottom: 1px solid var(--border); flex: 0 0 auto;
+}
+.recipe-toggle { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.pick-btn { font-size: 11px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+.pick-btn:hover { border-color: var(--accent); }
+.pick-btn.hidden { display: none; }
+.status { color: var(--text-dim); font-size: 11px; margin-left: auto; }
+.status.ok { color: #10b981; }
+.status.err { color: #ef4444; }
+
+#messages {
+  flex: 1; overflow-y: auto; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.msg { padding: 10px 12px; border-radius: 10px; max-width: 88%;
+  white-space: pre-wrap; line-height: 1.5; font-size: 14px; }
+.msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
+.msg.bot { align-self: flex-start; background: var(--surface-2); color: var(--text); }
+.msg.bot.loading { color: var(--text-dim); font-style: italic; }
+.msg.bot.error { background: #3a1d1d; color: #fca5a5; }
+
+/* 마크다운 */
+.msg.bot :first-child { margin-top: 0; }
+.msg.bot :last-child { margin-bottom: 0; }
+.msg.bot p { margin: 6px 0; }
+.msg.bot ul, .msg.bot ol { margin: 6px 0; padding-left: 20px; }
+.msg.bot table { border-collapse: collapse; margin: 8px 0; font-size: 13px; width: 100%; }
+.msg.bot th, .msg.bot td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+.msg.bot th { background: var(--surface); }
+.msg.bot code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.msg.bot strong { color: #fff; }
+
+/* 답변 속 실제 차트 */
+.chat-chart { height: 200px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px; margin: 8px 0; min-width: 0; }
+.chat-chart canvas { max-width: 100%; }
+
+/* 추적 패널 */
+.trace { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px; }
+.trace > summary { cursor: pointer; font-size: 11px; color: var(--text-dim); list-style: none; }
+.trace > summary:hover { color: var(--text); }
+.trace-body { margin-top: 6px; font-size: 12px; }
+.trace-h { color: var(--accent); font-weight: 600; margin: 6px 0 2px; }
+.trace-h span { color: var(--text-dim); font-weight: 400; font-size: 11px; }
+.trace-h span.chg { color: #10b981; font-weight: 600; }
+.trace-body ol { margin: 2px 0 4px; padding-left: 18px; }
+.trace-body li { margin: 2px 0; color: var(--text); }
+.trace-payload > summary { cursor: pointer; font-size: 11px; color: var(--text-dim); }
+.trace-payload pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px; max-height: 240px; overflow: auto; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+.trace-dl { margin-top: 6px; font-size: 11px; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+.trace-dl:hover { border-color: var(--accent); }
+
+#chat-form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); flex: 0 0 auto; }
+#chat-input { flex: 1; padding: 10px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 14px; background: var(--surface-2); color: var(--text); }
+#chat-input::placeholder { color: var(--text-dim); }
+#chat-input:focus { outline: none; border-color: var(--accent); }
+#chat-form button { background: var(--accent); color: #fff; border: none;
+  border-radius: 8px; padding: 0 16px; cursor: pointer; }

@@ -1,0 +1,9 @@
+Windows Registry Editor Version 5.00
+
+; 사내 자체 호스팅 익스텐션 강제 설치 (스토어 불필요)
+; EXTENSION_ID 와 update.xml URL 을 실제 값으로 교체.
+; GPO 사용 시: 컴퓨터 구성 → 관리 템플릿 → Google → Google Chrome → 확장 프로그램
+;            → "강제 설치할 앱/확장 프로그램 목록 구성" 에 동일 문자열 추가.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist]
+"1"="EXTENSION_ID_HERE;https://intranet.example.com/udc/update.xml"

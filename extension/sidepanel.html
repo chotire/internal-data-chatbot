@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    html, body { margin: 0; height: 100%; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; }
+  </style>
+</head>
+<body>
+  <!-- 챗봇 UI 는 우리 서버에서 로드 (익스텐션 업데이트 없이 서버 배포만으로 갱신).
+       src 는 sidepanel.js 에서 캐시버스터와 함께 설정 → 열 때마다 최신 UI -->
+  <iframe id="chat"></iframe>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>현장 관리 대시보드 (통합 데모)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --bg:#0f1419; --surface:#1a2029; --surface-2:#232b36;
+            --border:#2c3540; --text:#e4e8ee; --text-dim:#8a93a0; --accent:#3b82f6; }
+    * { box-sizing:border-box; }
+    body { font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif;
+           margin:0; background:var(--bg); color:var(--text); padding:24px; }
+    h1 { font-size:20px; margin:0 0 4px; } h2 { font-size:14px; color:var(--text-dim); margin:0 0 10px; }
+    p.note { color:var(--text-dim); font-size:13px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    /* min-width:0 → 그리드 항목이 내용(canvas) 고유 너비 아래로도 줄어들 수 있게 (차트 영역 축소 핵심) */
+    .grid2 > * { min-width:0; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:16px; min-width:0; }
+    canvas { max-width:100%; }
+
+    /* 인사카드 (generic: 라벨-값) */
+    .empcard .frow { display:flex; gap:12px; padding:5px 0; }
+    .empcard .k { width:80px; color:var(--text-dim); font-size:13px; }
+
+    /* 요약 표 (html 어댑터: <table>) */
+    table { border-collapse:collapse; width:100%; }
+    thead th { background:var(--surface-2); padding:8px 10px; text-align:left; font-size:13px; border-bottom:1px solid var(--border); }
+    tbody td { border-bottom:1px solid var(--border); padding:7px 10px; font-size:13px; }
+    tbody td.num { text-align:right; font-variant-numeric:tabular-nums; }
+
+    /* 가상 스크롤 (MAIN world: 전체는 window.GRID, DOM엔 보이는 행만) */
+    .vgrow { display:grid; grid-template-columns:1.4fr .8fr 1fr 1fr; height:34px; align-items:center; border-bottom:1px solid var(--border); }
+    .vgcell { padding:0 10px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vghead { background:var(--surface-2); font-weight:600; color:var(--text-dim); }
+    .vp { height:272px; overflow-y:auto; position:relative; }
+    .spacer { position:relative; } .vrows { position:absolute; left:0; right:0; top:0; }
+
+    .chart-box { height:220px; min-width:0; }
+    .udc-banner{border-radius:10px;padding:12px 14px;margin:12px 0;font-size:13px}
+    .udc-banner.warn{background:#2a1d10;border:1px solid #7c4a1e;color:#fcd9b6}
+    .udc-banner.ok{background:#10241c;border:1px solid #1f6b4f;color:#9ff0cf}
+    .udc-hidden{display:none}
+  </style>
+</head>
+<body>
+  <h1>현장 관리 대시보드</h1>
+  <p class="note">한 화면에 <b>인사카드</b>(generic) + <b>공종별 요약표</b>(html) + <b>현장 현황 가상스크롤</b>(MAIN world, 전체 50행) + <b>차트</b>(canvas, MAIN world)가 함께 있습니다. 익스텐션이 이 모두를 추출해 답합니다.</p>
+
+  <div id="udc-install" class="udc-banner warn udc-hidden">🧩 익스텐션 미감지 — 설치/리로드 후 새로고침.
+    <button onclick="location.reload()" style="margin-left:8px;padding:3px 10px;border:0;border-radius:6px;background:#7c4a1e;color:#fff;cursor:pointer">🔄</button></div>
+  <div id="udc-ok" class="udc-banner ok udc-hidden">✅ 익스텐션 감지됨.</div>
+
+  <div class="grid2">
+    <!-- 담당 PM (generic 인사카드) -->
+    <div class="card empcard">
+      <h2>담당 PM</h2>
+      <div class="frow"><span class="k">성명</span><span class="v v-name">박지연</span></div>
+      <div class="frow"><span class="k">부서</span><span class="v v-dept">토목사업부</span></div>
+      <div class="frow"><span class="k">연락처</span><span class="v v-tel">010-9876-5432</span></div>
+    </div>
+
+    <!-- 공종별 요약 (html <table>) -->
+    <div class="card">
+      <h2>공종별 계약 요약</h2>
+      <table>
+        <thead><tr><th>공종</th><th>계약금액 합계(백만원)</th><th>현장수</th></tr></thead>
+        <tbody>
+          <tr><td>주택</td><td class="num">912,000</td><td class="num">12</td></tr>
+          <tr><td>토목</td><td class="num">975,000</td><td class="num">13</td></tr>
+          <tr><td>플랜트</td><td class="num">988,000</td><td class="num">13</td></tr>
+          <tr><td>건축</td><td class="num">900,000</td><td class="num">12</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 현장 현황 (MAIN world 가상스크롤: 전체 50행은 window.GRID, DOM엔 보이는 행만) -->
+  <div class="card">
+    <h2>현장 현황 (가상 스크롤 · 전체 50, DOM엔 보이는 행만)</h2>
+    <div class="vgrow vghead"><div class="vgcell">현장명</div><div class="vgcell">공종</div><div class="vgcell">계약금액(백만원)</div><div class="vgcell">누적기성액(백만원)</div></div>
+    <div class="vp" id="vp"><div class="spacer" id="spacer"><div class="vrows" id="vrows"></div></div></div>
+  </div>
+
+  <!-- 차트 (canvas → MAIN world 가 Chart 인스턴스에서 데이터 읽음) -->
+  <div class="grid2">
+    <div class="card"><div class="chart-box"><canvas id="chart-worktype"></canvas></div></div>
+    <div class="card"><div class="chart-box"><canvas id="chart-billing"></canvas></div></div>
+  </div>
+
+  <script>
+    (function () {
+      // ── 데이터 레이어: 전체 50행은 window.GRID 에만 ──
+      const TYPES = ["주택", "토목", "플랜트", "건축"];
+      const rows = [];
+      for (let i = 1; i <= 50; i++) {
+        const contract = 50000 + i * 1000; // 최댓값 = 현장-50(100,000)
+        rows.push({ site: "현장-" + String(i).padStart(2, "0"), type: TYPES[i % 4],
+                    contract, billed: Math.round(contract * 0.5) });
+      }
+      window.GRID = { title: "현장 현황", columns: [
+        { field: "site", headerName: "현장명", type: "string" },
+        { field: "type", headerName: "공종", type: "string" },
+        { field: "contract", headerName: "계약금액", unit: "백만원", type: "number" },
+        { field: "billed", headerName: "누적기성액", unit: "백만원", type: "number" },
+      ], rows };
+
+      // ── 진짜 가상 스크롤(윈도잉) ──
+      const ROW_H = 34, vp = document.getElementById("vp"), spacer = document.getElementById("spacer"), vrows = document.getElementById("vrows");
+      spacer.style.height = rows.length * ROW_H + "px";
+      const fmt = (n) => n.toLocaleString();
+      function renderWindow() {
+        const start = Math.max(0, Math.floor(vp.scrollTop / ROW_H));
+        const count = Math.ceil(vp.clientHeight / ROW_H) + 2;
+        vrows.style.transform = "translateY(" + start * ROW_H + "px)";
+        vrows.innerHTML = rows.slice(start, start + count).map((r) =>
+          '<div class="vgrow"><div class="vgcell">' + r.site + '</div><div class="vgcell">' + r.type +
+          '</div><div class="vgcell">' + fmt(r.contract) + '</div><div class="vgcell">' + fmt(r.billed) + '</div></div>'
+        ).join("");
+      }
+      vp.addEventListener("scroll", renderWindow); renderWindow();
+
+      // ── 차트(canvas). MAIN world 가 Chart.instances 로, 폴백은 window.GRID_CHARTS ──
+      Chart.defaults.color = "#c7cdd6"; Chart.defaults.borderColor = "rgba(255,255,255,.08)";
+      window.GRID_CHARTS = [
+        { id: "contract_by_worktype", title: "공종별 계약금액 합계", type: "bar",
+          labels: ["주택","토목","플랜트","건축"], series: [{ name: "계약금액(백만원)", data: [912000,975000,988000,900000] }] },
+        { id: "monthly_billing", title: "월별 누적 기성 추이", type: "line",
+          labels: ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06"], series: [{ name: "누적기성(백만원)", data: [1.2e6,1.4e6,1.55e6,1.7e6,1.62e6,1.78e6] }] },
+      ];
+      new Chart(document.getElementById("chart-worktype"), { type: "bar",
+        data: { labels: window.GRID_CHARTS[0].labels, datasets: [{ label: window.GRID_CHARTS[0].series[0].name, data: window.GRID_CHARTS[0].series[0].data, backgroundColor: "#3b82f6" }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: window.GRID_CHARTS[0].title }, legend: { display: false } } } });
+      new Chart(document.getElementById("chart-billing"), { type: "line",
+        data: { labels: window.GRID_CHARTS[1].labels, datasets: [{ label: window.GRID_CHARTS[1].series[0].name, data: window.GRID_CHARTS[1].series[0].data, borderColor: "#10b981", fill: false, tension: .3 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: window.GRID_CHARTS[1].title }, legend: { display: false } } } });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var done = false;
+      function detected(v){ if(done)return; done=true;
+        document.getElementById("udc-install").classList.add("udc-hidden");
+        var ok=document.getElementById("udc-ok"); ok.classList.remove("udc-hidden");
+        if(v) ok.textContent="✅ 익스텐션 감지됨 (v"+v+")."; }
+      window.addEventListener("message",function(e){ if(e.source===window&&e.data&&e.data.type==="UDC_PRESENT")detected(e.data.version); });
+      var n=0,t=setInterval(function(){ var v=document.documentElement.getAttribute("data-udc-extension");
+        if(v){clearInterval(t);detected(v);} else if(++n>=15){clearInterval(t); if(!done) document.getElementById("udc-install").classList.remove("udc-hidden");} },200);
+    })();
+  </script>
+</body>
+</html>

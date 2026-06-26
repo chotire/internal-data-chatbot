@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>화면-인지형 챗봇 PoC v0.2 — 아키텍처 브리핑</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #161b22;
+    --bg-elev2: #1c2330;
+    --border: #2b3340;
+    --text: #e6edf3;
+    --text-dim: #9aa7b4;
+    --text-faint: #6b7785;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --accent3: #f0a868;
+    --danger: #ff7b72;
+    --purple: #d2a8ff;
+    --code-bg: #0a0e14;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+      Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Deck ---------- */
+  .deck { position: relative; width: 100vw; height: 100vh; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4.5vh 7vw 8vh;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(18px) scale(0.99);
+    transition: opacity .4s ease, transform .4s ease, visibility .4s;
+    overflow-y: auto;
+  }
+  .slide.active {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .slide::-webkit-scrollbar { width: 8px; }
+  .slide::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ---------- Typography ---------- */
+  .kicker {
+    font-size: clamp(.72rem, 1.1vw, .9rem);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 1.1rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 4.6vw, 4rem);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    margin-bottom: 1.2rem;
+  }
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    line-height: 1.18;
+    font-weight: 800;
+    letter-spacing: -.015em;
+    margin-bottom: 1.6rem;
+  }
+  h2 .em { color: var(--accent); }
+  .lead {
+    font-size: clamp(1rem, 1.7vw, 1.45rem);
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 60ch;
+  }
+  p { line-height: 1.6; }
+
+  .grad {
+    background: linear-gradient(100deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ---------- Layout helpers ---------- */
+  .cols { display: grid; gap: 1.4rem; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem;
+  }
+  .card h3 {
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
+    margin-bottom: .65rem;
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+  }
+  .card p, .card li { color: var(--text-dim); font-size: clamp(.85rem,1.15vw,1.02rem); }
+  .card .ico { font-size: 1.3em; }
+
+  ul.clean { list-style: none; }
+  ul.clean li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin: .55rem 0;
+    line-height: 1.5;
+    color: var(--text-dim);
+    font-size: clamp(.9rem, 1.25vw, 1.1rem);
+  }
+  ul.clean li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  ul.clean li b, ul.clean li strong { color: var(--text); font-weight: 700; }
+
+  .tag {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    padding: .22em .7em;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--bg-elev2);
+  }
+  .tag.good { color: var(--accent2); border-color: rgba(126,231,135,.35); }
+  .tag.bad { color: var(--danger); border-color: rgba(255,123,114,.35); }
+  .tag.warn { color: var(--accent3); border-color: rgba(240,168,104,.35); }
+
+  /* ---------- Table ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(.82rem, 1.15vw, 1.02rem);
+    margin-top: .4rem;
+  }
+  th, td {
+    text-align: left;
+    padding: .7rem .85rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  thead th {
+    color: var(--accent);
+    font-weight: 700;
+    border-bottom: 2px solid var(--border);
+    font-size: .9em;
+    letter-spacing: .02em;
+  }
+  td { color: var(--text-dim); }
+  td b { color: var(--text); }
+  tbody tr:hover { background: rgba(88,166,255,.05); }
+
+  /* ---------- Code / diagram ---------- */
+  pre.diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.3rem 1.5rem;
+    font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    font-size: clamp(.7rem, 1.05vw, .95rem);
+    line-height: 1.65;
+    color: var(--text-dim);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  pre.diagram .c-accent { color: var(--accent); }
+  pre.diagram .c-green { color: var(--accent2); }
+  pre.diagram .c-orange { color: var(--accent3); }
+  pre.diagram .c-purple { color: var(--purple); }
+  pre.diagram .c-dim { color: var(--text-faint); }
+
+  code.inline {
+    font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+    background: var(--bg-elev2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .08em .45em;
+    font-size: .86em;
+    color: var(--accent2);
+  }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: linear-gradient(90deg, rgba(88,166,255,.1), transparent);
+    padding: 1rem 1.3rem;
+    border-radius: 0 10px 10px 0;
+    font-size: clamp(.92rem, 1.3vw, 1.12rem);
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .callout.warn { border-color: var(--accent3); background: linear-gradient(90deg, rgba(240,168,104,.1), transparent); }
+  .callout.green { border-color: var(--accent2); background: linear-gradient(90deg, rgba(126,231,135,.1), transparent); }
+
+  .quote {
+    font-size: clamp(1.15rem, 2.3vw, 2rem);
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -.01em;
+    border-left: 4px solid var(--accent);
+    padding-left: 1.4rem;
+    color: var(--text);
+  }
+
+  /* ---------- Architecture diagram ---------- */
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1.2rem;
+    align-items: stretch;
+    margin-top: .5rem;
+  }
+  .arch-col {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem 1.3rem;
+    background: var(--bg-elev);
+    position: relative;
+  }
+  .arch-col.ext { border-color: rgba(88,166,255,.35); background: linear-gradient(180deg, rgba(88,166,255,.06), transparent); }
+  .arch-col.srv { border-color: rgba(126,231,135,.32); background: linear-gradient(180deg, rgba(126,231,135,.06), transparent); }
+  .arch-col h4 {
+    font-size: clamp(.78rem,1.1vw,.92rem);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 700;
+    margin-bottom: .9rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .arch-col.ext h4 { color: var(--accent); }
+  .arch-col.srv h4 { color: var(--accent2); }
+  .node {
+    background: var(--bg-elev2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .7rem .9rem;
+    margin-bottom: .65rem;
+    font-size: clamp(.82rem,1.15vw,1rem);
+    color: var(--text);
+    font-weight: 600;
+  }
+  .node:last-child { margin-bottom: 0; }
+  .node .sub {
+    display: block;
+    font-weight: 400;
+    color: var(--text-dim);
+    font-size: .82em;
+    margin-top: .25rem;
+    line-height: 1.45;
+  }
+  .node.lead-node { border-color: rgba(88,166,255,.4); }
+  .node.out { border-color: rgba(126,231,135,.4); }
+  .node.pill-row { display:flex; gap:.4rem; flex-wrap:wrap; background:transparent; border:none; padding:.1rem 0; }
+  .npill {
+    font-size: .74rem; font-weight: 700; padding: .28em .7em; border-radius: 8px;
+    background: var(--bg-elev2); border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .arch-mid {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .4rem; min-width: 120px; padding: 0 .3rem;
+  }
+  .arch-mid .flowlabel {
+    font-size: .72rem; color: var(--text-faint); text-align: center; line-height: 1.4;
+  }
+  .arch-mid .bigarrow { font-size: 2rem; color: var(--accent); line-height: 1; }
+  .arch-mid .chan {
+    border: 1px dashed var(--border); border-radius: 8px; padding: .4rem .6rem;
+    font-size: .72rem; color: var(--text-dim); text-align: center; background: var(--code-bg);
+  }
+  @media (max-width: 760px) {
+    .arch { grid-template-columns: 1fr; }
+    .arch-mid { flex-direction: row; min-width: 0; }
+    .arch-mid .bigarrow { transform: rotate(90deg); }
+  }
+
+  /* ---------- End-to-end pipeline ---------- */
+  .pipe { display: flex; align-items: stretch; gap: .55rem; margin-top: .4rem; }
+  .pipe .stage {
+    flex: 1; min-width: 0;
+    border: 1px solid var(--border); border-radius: 13px;
+    padding: .95rem 1rem 1.05rem; background: var(--bg-elev);
+    display: flex; flex-direction: column;
+  }
+  .pipe .stage.s-page { border-color: rgba(155,167,180,.35); }
+  .pipe .stage.s-ext  { border-color: rgba(88,166,255,.4); background: linear-gradient(180deg, rgba(88,166,255,.06), transparent); }
+  .pipe .stage.s-srv  { border-color: rgba(126,231,135,.35); background: linear-gradient(180deg, rgba(126,231,135,.06), transparent); }
+  .pipe .stage.s-ai   { border-color: rgba(240,168,104,.4); background: linear-gradient(180deg, rgba(240,168,104,.06), transparent); }
+  .pipe .stage .stnum { font-size: .68rem; font-weight: 800; letter-spacing: .12em; color: var(--text-faint); }
+  .pipe .stage h4 { font-size: clamp(.92rem,1.35vw,1.12rem); margin: .25rem 0 .5rem; display: flex; align-items: center; gap: .4rem; }
+  .pipe .stage ul { list-style: none; margin: 0; }
+  .pipe .stage li { font-size: clamp(.76rem,1.05vw,.92rem); color: var(--text-dim); line-height: 1.45; margin: .28rem 0; padding-left: .85rem; position: relative; }
+  .pipe .stage li::before { content: "·"; position: absolute; left: .15rem; color: var(--text-faint); }
+  .pipe .stage li b { color: var(--text); font-weight: 700; }
+  .pipe .conn { display: flex; align-items: center; justify-content: center; min-width: 26px; color: var(--accent); font-size: 1.5rem; }
+  .pipe-return {
+    margin-top: .7rem; display: flex; align-items: center; gap: .55rem;
+    border: 1px dashed var(--border); border-radius: 10px; padding: .6rem .9rem;
+    font-size: clamp(.82rem,1.15vw,1rem); color: var(--text-dim); background: var(--code-bg);
+  }
+  .pipe-return .ra { color: var(--accent2); font-weight: 800; font-size: 1.1em; }
+  .pipe-return b { color: var(--text); }
+  @media (max-width: 760px) {
+    .pipe { flex-direction: column; }
+    .pipe .conn { transform: rotate(90deg); min-height: 22px; }
+  }
+
+  .step-row { display: flex; align-items: stretch; gap: 1rem; flex-wrap: wrap; }
+  .step {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    position: relative;
+  }
+  .step .num {
+    font-size: .75rem;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: .1em;
+  }
+  .step h4 { font-size: clamp(.95rem,1.4vw,1.15rem); margin: .3rem 0 .45rem; }
+  .step p { color: var(--text-dim); font-size: clamp(.8rem,1.1vw,.95rem); }
+  .arrow { display: flex; align-items: center; color: var(--text-faint); font-size: 1.5rem; }
+
+  .tier-bar {
+    display: flex; align-items: center; gap: .8rem;
+    padding: .85rem 1.1rem; border-radius: 10px; margin: .5rem 0;
+    border: 1px solid var(--border); background: var(--bg-elev);
+  }
+  .tier-num {
+    flex: 0 0 auto; width: 2.4rem; height: 2.4rem; border-radius: 8px;
+    display: grid; place-items: center; font-weight: 800; font-size: 1.1rem;
+  }
+  .t1 .tier-num { background: rgba(126,231,135,.18); color: var(--accent2); }
+  .t2 .tier-num { background: rgba(240,168,104,.18); color: var(--accent3); }
+  .t3 .tier-num { background: rgba(255,123,114,.18); color: var(--danger); }
+  .tier-bar .tt { font-weight: 700; color: var(--text); }
+  .tier-bar .td { color: var(--text-dim); font-size: .9em; }
+
+  /* ---------- Chrome (nav) ---------- */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 4px; background: var(--bg-elev2); z-index: 50;
+  }
+  .progress { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .4s ease; }
+
+  .brandmark {
+    position: fixed; top: 1.4rem; left: 2rem; z-index: 40;
+    font-size: .8rem; font-weight: 700; letter-spacing: .04em; color: var(--text-faint);
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .brandmark .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); box-shadow: 0 0 10px var(--accent2); }
+
+  .nav {
+    position: fixed; bottom: 1.5rem; right: 2rem; z-index: 40;
+    display: flex; align-items: center; gap: .7rem;
+  }
+  .nav button {
+    width: 2.6rem; height: 2.6rem; border-radius: 9px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    color: var(--text); font-size: 1.1rem; cursor: pointer;
+    display: grid; place-items: center; transition: .15s;
+  }
+  .nav button:hover { background: var(--bg-elev2); border-color: var(--accent); color: var(--accent); }
+  .nav button:disabled { opacity: .3; cursor: default; }
+  .counter { font-size: .85rem; color: var(--text-dim); min-width: 3.5rem; text-align: center; font-variant-numeric: tabular-nums; }
+
+  .dots {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 40;
+    display: flex; gap: .5rem; max-width: 60vw; flex-wrap: wrap; justify-content: center;
+  }
+  .dots .d {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--border); cursor: pointer; transition: .2s; border: none; padding: 0;
+  }
+  .dots .d.active { background: var(--accent); transform: scale(1.3); }
+  .dots .d:hover { background: var(--text-dim); }
+
+  .hint {
+    position: fixed; bottom: 1.65rem; left: 2rem; z-index: 40;
+    font-size: .75rem; color: var(--text-faint);
+  }
+  .hint kbd {
+    font-family: inherit; background: var(--bg-elev2); border: 1px solid var(--border);
+    border-radius: 5px; padding: .1em .45em; font-size: .9em; color: var(--text-dim);
+  }
+
+  @media (max-width: 760px) {
+    .cols-2, .cols-3 { grid-template-columns: 1fr; }
+    .hint, .dots { display: none; }
+    .slide { padding: 7vh 6vw 12vh; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="progress" id="progress"></div></div>
+<div class="brandmark"><span class="dot"></span> 화면-인지형 챗봇 · v0.2</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1. TITLE -->
+  <section class="slide active">
+    <div class="kicker">Internal Data Chatbot · PoC v0.2</div>
+    <h1>화면-인지형 <span class="grad">챗봇</span><br>아키텍처 브리핑</h1>
+    <p class="lead">
+      웹 화면에 떠 있는 <b style="color:var(--text)">비즈니스 데이터(표·차트)</b>를 근거로 답하는 챗봇.<br>
+      레거시 코드 수정 없이, 브라우저 익스텐션이 화면을 인식해 데이터를 추출.
+    </p>
+    <div style="margin-top:2rem; display:flex; gap:.6rem; flex-wrap:wrap;">
+      <span class="tag">브라우저 익스텐션</span>
+      <span class="tag">플러그러블 어댑터</span>
+      <span class="tag">MAIN world 데이터레이어</span>
+      <span class="tag">가상스크롤 폴백</span>
+    </div>
+  </section>
+
+  <!-- 2. 개요 -->
+  <section class="slide">
+    <div class="kicker">무엇을 만드는가</div>
+    <h2>"화면에 떠 있는 데이터"만 <span class="em">근거</span>로 응답</h2>
+    <div class="cols cols-3">
+      <div class="card">
+        <h3><span class="ico">🖥️</span> 화면 인지</h3>
+        <p>현재 렌더된 URL의 화면을 인식하고, 표·차트·카드 데이터를 추출.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">💬</span> 근거 기반 응답</h3>
+        <p>추출한 화면 데이터만을 근거로 응답. 화면에 없으면 "없음"이 정답.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🎯</span> 목표는 PoC</h3>
+        <p>완성도·확장성보다 <b>아이디어 검증과 기술 타당성</b> 확인이 우선.</p>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1.6rem;">
+      "Claude in Chrome" 형태 — 단, 범위는 <b>'화면 데이터를 읽고 답하기'</b>로 한정.
+    </div>
+  </section>
+
+  <!-- 3. 왜 익스텐션 방식인가 (핵심 제약 + 트레이드오프) -->
+  <section class="slide">
+    <div class="kicker">가장 중요한 배경 · 핵심 제약 → 트레이드오프</div>
+    <h2>"무수정" 제약이 이끈 익스텐션 방식으로의 <span class="em">선회</span></h2>
+    <div class="quote" style="margin:0 0 1.3rem; font-size:clamp(1rem,1.9vw,1.5rem);">
+      "기존 레거시 코드 수정을 통한 챗봇 연결 금지"
+    </div>
+    <table>
+      <thead>
+        <tr><th>기준</th><th>데이터 주입 (레거시 수정)</th><th>익스텐션이 화면 인식</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>레거시 코드 수정</b></td>
+          <td>필요 <span class="tag bad">제약 위반</span></td>
+          <td>불필요 <span class="tag good">제약 충족</span></td>
+        </tr>
+        <tr>
+          <td><b>데이터 완전성</b></td>
+          <td>데이터모델 = 전체</td>
+          <td>단순 DOM 스크래핑은 "보이는 행"만 <span class="tag warn">약점</span></td>
+        </tr>
+        <tr>
+          <td><b>범용성</b></td>
+          <td>화면마다 연동 필요</td>
+          <td>임의 페이지에 동작</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="cols cols-2" style="margin-top:1.3rem;">
+      <div class="callout green">확장된 요구: 특정 UI 툴 전용이 아니라 <b>WebSquare / React / Vue / 일반 HTML</b> 등 어떤 화면에서도 동작 → <b>플러그러블 어댑터</b>의 출발점.</div>
+      <div class="callout warn">DOM 스크래핑의 <b>데이터 완전성 약점</b> → <b>데이터 레이어 직접 읽기 + 가상스크롤 폴백</b>으로 보완.</div>
+    </div>
+  </section>
+
+  <!-- 5. 전체 아키텍처 (End-to-End) -->
+  <section class="slide">
+    <div class="kicker">아키텍처 · 전체 한눈에</div>
+    <h2>웹페이지에서 <span style="color:var(--text-faint)">→</span> 답변까지 <span class="em">End-to-End</span></h2>
+    <div class="pipe">
+      <div class="stage s-page">
+        <div class="stnum">① 대상</div>
+        <h4><span>🖥️</span> 웹페이지</h4>
+        <ul>
+          <li><b>레거시 · 무수정</b></li>
+          <li>React·Vue·WebSquare·HTML</li>
+          <li>가상스크롤 그리드·차트·인사카드</li>
+        </ul>
+      </div>
+      <div class="conn">→</div>
+      <div class="stage s-ext">
+        <div class="stnum">② 익스텐션 — 추출·정규화</div>
+        <h4><span>🧩</span> 데이터 확보</h4>
+        <ul>
+          <li><b>ISOLATED 어댑터</b> (table·domStructure) + recipe</li>
+          <li><b>MAIN world 리더</b> — 데이터레이어 전체 행·차트</li>
+          <li>둘을 <b>병합</b> → 공통 <b>ScreenContext</b></li>
+        </ul>
+      </div>
+      <div class="conn">→</div>
+      <div class="stage s-srv">
+        <div class="stnum">③ 우리 서버</div>
+        <h4><span>🌐</span> 질문 + 데이터</h4>
+        <ul>
+          <li>프롬프트 + <b>LLM 프록시</b></li>
+          <li>추출 <b>recipe</b> 레지스트리</li>
+          <li>챗봇 UI 제공(iframe)</li>
+        </ul>
+      </div>
+      <div class="conn">→</div>
+      <div class="stage s-ai">
+        <div class="stnum">④ 생성</div>
+        <h4><span>🤖</span> OpenAI</h4>
+        <ul>
+          <li>화면 데이터 <b>근거로 1패스 응답</b></li>
+          <li>API 키는 <b>서버에만</b></li>
+        </ul>
+      </div>
+    </div>
+    <div class="pipe-return">
+      <span class="ra">↩</span>
+      <span>답변은 <b>서버 → 사이드패널 iframe 챗봇 UI</b>로 돌아와 사용자에게 표시 <span style="color:var(--text-faint)">(postMessage · origin 검증)</span></span>
+    </div>
+    <div class="callout" style="margin-top:.9rem;">
+      핵심: <b>레거시를 건드리지 않고</b> 익스텐션이 화면을 읽어 <b>공통 형식(ScreenContext)</b>으로 만들고, 서버·LLM은 그 형식만 다룸 — 화면이 무엇이든 뒷단은 동일.
+    </div>
+  </section>
+
+  <!-- 5b. 데이터 전달 경로 -->
+  <section class="slide">
+    <div class="kicker">아키텍처 · 데이터 전달 경로</div>
+    <h2>화면 데이터가 챗봇까지 가는 <span class="em">4단계</span></h2>
+    <p class="lead" style="margin-bottom:1.2rem;">
+      페이지 안의 <b style="color:var(--text)">content script</b>와 챗봇 화면인 <b style="color:var(--text)">iframe</b>은
+      서로 다른 보안 영역이라 <b style="color:var(--text)">직접 대화할 수 없음</b> → 그래서 안전한 중간 단계를 거쳐 데이터를 넘김.
+    </p>
+    <div class="tier-bar t1">
+      <div class="tier-num">1</div>
+      <div><span class="tt">content script</span> — <span class="td">웹페이지 안에서 화면 데이터(표·차트·카드)를 추출. 단, 격리(ISOLATED) 영역이라 외부 서버 호출·패널 접근은 직접 못 함.</span></div>
+    </div>
+    <div class="tier-bar t1">
+      <div class="tier-num">2</div>
+      <div><span class="tt">service worker (background)</span> — <span class="td">익스텐션의 중앙 관제실. 권한을 갖고 MAIN world 주입·데이터 병합·탭 관리를 수행하며, content script가 뽑은 결과를 모음.</span></div>
+    </div>
+    <div class="tier-bar t1">
+      <div class="tier-num">3</div>
+      <div><span class="tt">side panel (얇은 셸)</span> — <span class="td">브라우저 사이드바에 떠 있는 껍데기 화면. background가 모은 데이터를 건네받아 그 안의 iframe으로 전달.</span></div>
+    </div>
+    <div class="tier-bar t1">
+      <div class="tier-num">4</div>
+      <div><span class="tt">iframe (우리 서버 UI)</span> — <span class="td"><code class="inline">postMessage</code>로 데이터 수신. <b>origin 검증</b>으로 "우리 서버에서 온 메시지"만 신뢰해 위조를 차단.</span></div>
+    </div>
+    <div class="callout" style="margin-top:1.3rem;">
+      <b>왜 굳이 거치나?</b> ① 웹페이지 ② 익스텐션 특권 영역 ③ 우리 서버(웹 origin) — 이 <b>세 경계</b>를 안전하게 넘어야 하기 때문.
+      서로 다른 창 사이의 유일한 통로가 <code class="inline">postMessage</code>이고, <b>origin 검증</b>이 그 통로의 자물쇠 역할.
+    </div>
+  </section>
+
+  <!-- 6. 어댑터 패턴 -->
+  <section class="slide">
+    <div class="kicker">핵심 · 플러그러블 어댑터 패턴</div>
+    <h2>감지 <span style="color:var(--text-faint)">→</span> 추출 <span style="color:var(--text-faint)">→</span> <span class="em">공통 정규화</span></h2>
+    <div class="step-row">
+      <div class="step">
+        <div class="num">STEP 1</div>
+        <h4>감지 (detect)</h4>
+        <p>각 어댑터가 <b>DOM 단서(클래스·태그)</b>로 "내가 처리할 화면인가"를 스스로 판정. 결정론적이며, 맨 아래 어댑터는 항상 참이라 <b>빈손이 없음</b>.</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="num">STEP 2</div>
+        <h4>추출 (extract)</h4>
+        <p>판정된 어댑터가 데이터를 꺼내 공통 <b>ScreenContext</b>로 변환. 도메인별 화면 차이는 서버 <b>recipe</b>가 <b>콘텐츠 영역(scope)</b>만 알려주고, 구조화는 어댑터가 그 안에서 수행.</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="num">STEP 3</div>
+        <h4>레지스트리 (우선순위 협업)</h4>
+        <p>우선순위 순으로 각 어댑터가 <b>맡은(점유한) 영역만 추출해 합침(merge)</b>. 상위가 다루지 못한 부분은 하위가 이어받아 채움.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:1.3rem; margin-bottom:.9rem; font-size:1.05rem; max-width:none; white-space:nowrap;">
+      등록된 어댑터를 <b style="color:var(--text)">우선순위 순으로 검사</b> — 새 프레임워크는 어댑터만 추가하면 체인에 참여
+    </p>
+    <div class="step-row">
+      <div class="step">
+        <div class="num">상위 · 프레임워크</div>
+        <h4>프레임워크 어댑터</h4>
+        <p>DOM 단서로 유형을 감지하고, 프레임워크 <b>데이터레이어(MAIN world)에서 직접 추출</b>.<br>
+        <span style="color:var(--text-faint)">DOM엔 가상스크롤로 보이는 행만 있지만, 데이터레이어엔 <b style="color:var(--text-dim)">전체 행</b>이 있어 빠짐없이 확보.</span></p>
+        <ul class="clean" style="margin-top:.5rem;">
+          <li><b>WebSquare</b> → 전역 <code class="inline">$w·scwin</code> 데이터모델 <span class="tag warn">현재 스텁</span></li>
+          <li><b>React</b> → fiber <code class="inline">memoizedProps</code>·state <span class="tag">예정</span></li>
+          <li><b>Vue</b> → <code class="inline">__vue_app__</code>·컴포넌트 data <span class="tag">예정</span></li>
+        </ul>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="num">중위 · 표</div>
+        <h4>table</h4>
+        <p>화면에 <code class="inline">&lt;table&gt;</code> 표가 있으면 담당. <code class="inline">&lt;th&gt;</code>로 라벨까지 정확히 추출.</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="num">최하 · 폴백</div>
+        <h4>domStructure <span class="tag good" style="margin-left:.2rem">항상 동작</span></h4>
+        <p>표가 아니어도 div 그리드·인사카드의 <b>반복 구조</b>를 읽는 <b>어댑터 최하위(구조화 폴백)</b>.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:1.1rem; font-size:.88rem; color:var(--text-faint); max-width:none; white-space:nowrap;">
+      ※ 위는 <b style="color:var(--text-dim)">ISOLATED(DOM) 어댑터 체인</b> — <b style="color:var(--text-dim)">데이터레이어(MAIN world) 읽기는 별도 실행 후 병합</b> (프레임워크 어댑터는 현재 감지 스텁)
+    </p>
+  </section>
+
+  <!-- 7. 추출 상세 (추출 계층 + 데이터 vs 의미) -->
+  <section class="slide">
+    <div class="kicker">추출 — 어디서 뽑고, 무엇으로 라벨링</div>
+    <h2><span class="em">"데이터는 모델, 의미는 DOM"</span></h2>
+    <p class="lead" style="margin-bottom:.9rem; font-size:1.0rem;">전제: 라벨은 DOM에 있다 — 데이터 위치를 찾아 라벨과 매핑(대부분 어댑터 선에서 해결).</p>
+    <table>
+      <thead><tr><th>단계 (신뢰도 순)</th><th>무엇</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td><b>picked</b> <span style="color:var(--text-faint);font-size:.85em">사용자 지정</span></td><td>챗봇 "🎯 영역 지정" → 사용자가 클릭한 영역을 <b>최우선</b>으로 스코프 추출</td><td>보조 · <code class="inline">UDC.run(pickedSelector)</code></td></tr>
+        <tr><td><b>table</b> <span style="color:var(--text-faint);font-size:.85em">html 표</span></td><td><code class="inline">&lt;table&gt;</code> thead/tbody → 데이터 + <code class="inline">&lt;th&gt;</code> 라벨</td><td>table.js</td></tr>
+        <tr><td><b>domStructure</b> <span style="color:var(--text-faint);font-size:.85em">제네릭</span></td><td>div 그리드·인사카드: 반복구조로 데이터 영역 찾고 헤더행/라벨-값 매핑</td><td>항상 동작하는 최하위 어댑터. dom-structure.js</td></tr>
+        <tr><td><b>데이터레이어</b> <span style="color:var(--text-faint);font-size:.85em">MAIN world</span></td><td>페이지 전역(데이터모델·차트 인스턴스)을 <code class="inline">executeScript({world:"MAIN"})</code>로 읽음</td><td><b style="color:var(--accent2)">가상스크롤 전체 + 컬럼정의 라벨 + 차트</b></td></tr>
+        <tr><td><b>recipe</b> <span style="color:var(--text-faint);font-size:.85em">추출 레시피</span></td><td>도메인별 <b>콘텐츠 영역(scope include/exclude)</b> + 접근(dataLayer)·거버넌스(mask/deny) 힌트. 구조화는 어댑터에 위임</td><td>데이터 파일 <code class="inline">recipes.jsonc</code> · <code class="inline">/api/recipe</code></td></tr>
+        <tr><td><b>text</b> <span style="color:var(--text-faint);font-size:.85em">보이는 텍스트</span></td><td>위로 못 잡은 <b>보이는 텍스트</b>를 그대로 캡처 → 게시글·기사 등도 답변</td><td>최후 폴백 · collectVisibleText(상한 30k)</td></tr>
+      </tbody>
+    </table>
+    <div class="cols cols-2" style="margin-top:1.1rem;">
+      <div class="card">
+        <h3><span class="ico">📊</span> 데이터(rows) = 모델</h3>
+        <p style="font-size:.92em">프레임워크 <b>데이터 레이어</b>에서 — 가상스크롤이어도 전체 보유. <span style="color:var(--text-faint)">WebSquare 데이터모델 · React fiber <code class="inline">memoizedProps</code> · Vue data · 그리드 API <code class="inline">forEachNode</code></span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🏷️</span> 의미(라벨/단위) = DOM</h3>
+        <p style="font-size:.92em"><b>DOM 헤더</b>(<code class="inline">&lt;th&gt;</code>·헤더 셀·<code class="inline">aria-label</code>) 또는 <b>그리드 컬럼 정의</b>(<code class="inline">columnDefs</code>의 <code class="inline">headerName</code>·단위) — 라벨이 설정에만 있을 때.</p>
+      </div>
+    </div>
+    <div class="callout green" style="margin-top:1rem;">
+      <b>가시성 필터</b>: 보이는 요소만 추출(숨은 SPA 탭/슬라이드 제외) · <b>text 폴백</b> 덕에 "추출 못함"은 진짜 빈 화면에서만.
+    </div>
+    <div class="callout" style="margin-top:.7rem;">
+      어댑터가 둘을 합쳐 <code class="inline">columns(label/unit)+rows</code>로 정규화 · <b>병합 시 표·차트=MAIN 우선, 카드=ISOLATED</b> · 차트는 데이터 레이어에서 <code class="inline">charts(labels/series)</code>로.
+    </div>
+  </section>
+
+  <!-- 7b. Recipe 전용 -->
+  <section class="slide">
+    <div class="kicker">핵심 · 추출 레시피(recipe)</div>
+    <h2>코드 말고 <span class="em">config</span>로 — 도메인 적응</h2>
+    <p class="lead" style="margin-bottom:1rem; font-size:1.0rem;">recipe 는 "어디를 읽고/버리고, 어디서 데이터를 읽고, 무엇을 가릴지"만 선언한다. <b style="color:var(--text)">구조화(표/카드)는 어댑터가 한다.</b></p>
+    <div class="cols cols-2">
+      <div class="card">
+        <h3><span class="ico">🧩</span> recipe 가 선언하는 것</h3>
+        <ul class="clean">
+          <li><b>match</b> — url(glob 또는 <code class="inline">/정규식/</code>) + <code class="inline">domWhen</code> → 여러 개면 <b>priority</b></li>
+          <li><b>scope</b> — <code class="inline">include</code>/<code class="inline">exclude</code> (모든 추출 계층 공통)</li>
+          <li><b>dataLayer</b> — 전체데이터 위치 힌트(예 <code class="inline">window.GRID</code>)</li>
+          <li><b>mask</b> 값 가림 · <b>deny</b> 추출 금지 (거버넌스)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="ico">📄</span> server/recipes.jsonc</h3>
+        <pre class="diagram" style="font-size:.78rem; margin:0; padding:.9rem 1rem;">{
+  "name": "site-portal",
+  "match": { "url": ["*/portal/site*"],
+             "domWhen": ".site-portal" },
+  "priority": 10,
+  "scope": {
+    "include": ["#contents"],
+    "exclude": ["nav", ".gnb"]
+  },
+  "dataLayer": { "path": "window.GRID" },
+  "mask": [".ssn"], "deny": [".secret"]
+}</pre>
+      </div>
+    </div>
+    <div class="callout green" style="margin-top:1.1rem;">
+      데이터 파일(<code class="inline">recipes.jsonc</code>)만 고치면 <b>서버 재시작 없이 갱신</b> · recipe 없으면 어댑터 기본 동작(<b>회귀 안전</b>) · 스키마 검증 <code class="inline">schemas.py Recipe</code>.
+    </div>
+  </section>
+
+  <!-- 7c. 데이터 수집 체인 (런타임) -->
+  <section class="slide">
+    <div class="kicker">아키텍처 · 데이터 수집 체인 (런타임)</div>
+    <h2>질문 한 번에 <span class="em">일어나는 일</span></h2>
+    <div class="tier-bar t1">
+      <div class="tier-num">1</div>
+      <div><span class="tt">background</span> (service worker) — <span class="td">탭에 스크립트 주입·지휘, 마지막에 결과 병합. recipe 는 서버 <code class="inline">/api/recipe</code>(recipes.jsonc)에서 fetch.</span></div>
+    </div>
+    <div class="tier-bar t1">
+      <div class="tier-num">2</div>
+      <div><span class="tt">base.js · UDC.run</span> (ISOLATED) — <span class="td">레지스트리·오케스트레이션: domWhen 게이트 → scope <b>exclude/deny 선점</b> → <b>include 루트</b> → picker → 어댑터 → 차트 → 텍스트 폴백 → mask</span></div>
+    </div>
+    <div class="tier-bar t1">
+      <div class="tier-num">↳</div>
+      <div><span class="tt">어댑터 priority</span> — <span class="td"><b>websquare(10)</b> → <b>table(0)</b> → <b>domStructure(-10)</b>. 각자 scope 안에서 감지(detect)→추출(extract), 점유 안 된 나머지를 채움(merge).</span></div>
+    </div>
+    <div class="tier-bar t1">
+      <div class="tier-num">3</div>
+      <div><span class="tt">readDataLayer</span> (MAIN world) — <span class="td">페이지 전역 <code class="inline">window.GRID</code>·<code class="inline">Chart.instances</code> 직접 읽기(가상스크롤 전체+차트). scope 필터 적용.</span></div>
+    </div>
+    <div class="tier-bar t1">
+      <div class="tier-num">4</div>
+      <div><span class="tt">병합 → ScreenContext</span> — <span class="td">표·차트=MAIN 우선, 카드·텍스트=ISOLATED → 서버 <code class="inline">/api/chat</code> → OpenAI</span></div>
+    </div>
+    <div class="callout" style="margin-top:1rem;">
+      <b>프레임워크 판별(detect 단서)</b>: WebSquare <code class="inline">$w·scwin·w2grid</code> · React <code class="inline">__reactFiber$</code> · Vue <code class="inline">__vue_app__</code> — <span style="color:var(--text-faint)">현재 websquare 는 스텁, React/Vue 데이터 리더는 예정</span>
+    </div>
+  </section>
+
+  <!-- 9. 가상스크롤 폴백 -->
+  <section class="slide">
+    <div class="kicker">데이터 완전성 보완</div>
+    <h2>가상 스크롤 <span class="em">3단 폴백</span> <span style="font-size:.5em; color:var(--text-faint); font-weight:600; letter-spacing:0;">— 위에서부터 시도, 안 되면 다음 (구현 상태는 항목별 표기)</span></h2>
+    <div class="tier-bar t1">
+      <div class="tier-num">1</div>
+      <div><span class="tt">데이터 레이어 직접 읽기</span> — <span class="td">전체·즉시 (최선)</span> <span class="tag good">구현 · 데모 window.GRID</span></div>
+    </div>
+    <div class="tier-bar t2" style="opacity:.6;">
+      <div class="tier-num">2</div>
+      <div><span class="tt" style="text-decoration:line-through;">자동 스크롤하며 행을 메모리에 누적</span> — <span class="td">느림·중복제거 키 의존·불완전</span> <span class="tag bad">고려 후 배제</span></div>
+    </div>
+    <div class="tier-bar t3">
+      <div class="tier-num">3</div>
+      <div><span class="tt">보이는 행만 (ISOLATED 폴백)</span> — <span class="td">최후</span> <span class="tag">부분 · 폴백은 동작, "N행 기준" 고지는 예정</span></div>
+    </div>
+    <div class="callout warn" style="margin-top:1.5rem;">
+      <b>(설계 방침)</b> 서버 페이지네이션 그리드는 데이터가 브라우저에 아예 없어 <b>위 방법으로 전체 확보 불가</b> → <b>한계로 사용자에게 고지</b>
+    </div>
+    <p class="lead" style="margin-top:1.3rem; font-size:1.05rem;">
+      💡 시연 포인트: "계약금액 가장 큰 현장?" 의 정답(현장-50)은 가상스크롤로 <b style="color:var(--text)">화면에 안 보이는 행</b>에 존재 → MAIN world가 전체를 읽어야 도달 가능.
+    </p>
+  </section>
+
+  <!-- 9. 운영 · 갱신 경계 · 보안 · 배포 -->
+  <section class="slide">
+    <div class="kicker">운영 · 갱신 경계 · 보안 · 배포</div>
+    <h2>익스텐션 업데이트 없이 <span class="em">서버 배포만</span>으로 갱신</h2>
+    <p class="lead" style="margin-bottom:1rem; font-size:1.0rem;">원칙: <b style="color:var(--text)">자주 바뀌는 건 서버에, 드물게 바뀌는 건 익스텐션에</b> (익스텐션 재배포는 느리고 번거로움).</p>
+    <div class="cols cols-2">
+      <div class="card" style="border-color:rgba(126,231,135,.32)">
+        <h3><span class="ico">🌐</span> 서버 배포로 갱신 <span class="tag good">빠름·잦음</span></h3>
+        <ul class="clean">
+          <li><b>챗봇 UI</b> — Side Panel 얇은 셸 + <code class="inline">&lt;iframe&gt;</code>으로 우리 서버 UI 로드</li>
+          <li><b>LLM 프롬프트</b> · <b>추출 레시피(recipe)</b></li>
+        </ul>
+        <p style="margin-top:.5rem; font-size:.92em">→ 코드 아닌 '설정·콘텐츠' → 배포 즉시 전체 반영.</p>
+      </div>
+      <div class="card" style="border-color:rgba(240,168,104,.32)">
+        <h3><span class="ico">🧩</span> 익스텐션 업데이트로만 <span class="tag warn">느림·드묾</span></h3>
+        <ul class="clean">
+          <li><b>어댑터 추출 로직</b> · content script · service worker</li>
+        </ul>
+        <p style="margin-top:.5rem; font-size:.92em">→ MV3 보안상 <b>원격 코드를 특권 영역에 못 올림</b> → 로직 변경은 재배포 필요.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🔐</span> 보안</h3>
+        <ul class="clean">
+          <li>OpenAI 키는 <b>서버(프록시)에만</b></li>
+          <li>내부 데이터 외부 전송은 <b>사전 승인·거버넌스</b></li>
+          <li><code class="inline">postMessage</code>는 <b>origin 검증 필수</b></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="ico">📦</span> 엔터프라이즈 배포</h3>
+        <ul class="clean">
+          <li><code class="inline">.crx</code>+<code class="inline">update.xml</code> 사내 자체 호스팅</li>
+          <li><code class="inline">ExtensionInstallForcelist</code> 강제 설치 → 스토어 불필요·자동 업데이트</li>
+          <li>Chrome/Edge 동일 (Chromium)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. 향후 방향 -->
+  <section class="slide">
+    <div class="kicker">향후 방향 · 로드맵</div>
+    <h2>React / Vue / WebSquare <span class="em">실제 데이터 리더</span></h2>
+    <div class="callout warn" style="margin-bottom:1.5rem;">
+      현재 <code class="inline">readDataLayer</code> 는 데모 컨벤션(<code class="inline">window.GRID</code>)만 지원 → 실제 프레임워크 데이터모델 읽기로 확장 필요.
+    </div>
+    <div class="cols cols-3">
+      <div class="card">
+        <h3>⚛️ React</h3>
+        <p>fiber <code class="inline">memoizedProps</code> / state에서 그리드·차트 데이터 읽기.</p>
+      </div>
+      <div class="card">
+        <h3>🟢 Vue</h3>
+        <p><code class="inline">__vue_app__</code> / 컴포넌트 data 트리에서 데이터 읽기.</p>
+      </div>
+      <div class="card">
+        <h3>🏢 WebSquare</h3>
+        <p><code class="inline">scwin</code> / 데이터모델, AG Grid <code class="inline">api.forEachNode</code> 읽기.</p>
+      </div>
+    </div>
+    <ul class="clean" style="margin-top:1.4rem;">
+      <li>(드물게) 특수 화면용 <b>추출 레시피(recipes.jsonc)</b> 추가 — 콘텐츠 영역·힌트 선언</li>
+      <li>큰 화면용 <b>컨텍스트 최적화</b> — 컴포넌트 라우팅(2-pass)으로 질문 관련 데이터만 LLM 전송</li>
+      <li><b>사용자 수동 검증</b>: 브라우저 내 익스텐션 동작은 헤드리스 검증 불가</li>
+    </ul>
+  </section>
+
+
+</div>
+
+<!-- Navigation -->
+<div class="dots" id="dots"></div>
+<div class="nav">
+  <button id="prev" aria-label="이전">‹</button>
+  <span class="counter" id="counter">1 / 12</span>
+  <button id="next" aria-label="다음">›</button>
+</div>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>F</kbd> 전체화면</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let cur = 0;
+
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const dotsWrap = document.getElementById('dots');
+
+  // build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('button');
+    d.className = 'd' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', '슬라이드 ' + (i + 1));
+    d.addEventListener('click', () => go(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function go(n) {
+    cur = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === cur));
+    dots.forEach((d, i) => d.classList.toggle('active', i === cur));
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+    counter.textContent = (cur + 1) + ' / ' + total;
+    prevBtn.disabled = cur === 0;
+    nextBtn.disabled = cur === total - 1;
+    location.hash = cur + 1;
+  }
+
+  prevBtn.addEventListener('click', () => go(cur - 1));
+  nextBtn.addEventListener('click', () => go(cur + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(cur + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(total - 1);
+    else if (e.key.toLowerCase() === 'f') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // swipe (touch)
+  let tx = 0;
+  document.addEventListener('touchstart', e => tx = e.touches[0].clientX, {passive:true});
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1));
+  }, {passive:true});
+
+  // deep-link
+  const start = parseInt(location.hash.replace('#',''), 10);
+  go(Number.isFinite(start) && start >= 1 ? start - 1 : 0);
+</script>
+</body>
+</html>

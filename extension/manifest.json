@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "김반장 v0.2.0",
+  "version": "0.2.0",
+  "description": "현재 렌더된 화면의 데이터를 인식해 질문에 답하는 챗봇 (플러그러블 어댑터).",
+  "permissions": ["sidePanel", "tabs", "scripting"],
+  "host_permissions": ["http://localhost:8000/*", "http://127.0.0.1:8000/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "데이터 챗봇 열기" }
+}

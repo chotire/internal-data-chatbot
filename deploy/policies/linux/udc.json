@@ -1,0 +1,6 @@
+{
+  "_comment": "배치 경로: /etc/opt/chrome/policies/managed/udc.json (Chrome) 또는 /etc/chromium/policies/managed/ (Chromium). EXTENSION_ID 와 URL 을 실제 값으로 교체.",
+  "ExtensionInstallForcelist": [
+    "EXTENSION_ID_HERE;https://intranet.example.com/udc/update.xml"
+  ]
+}

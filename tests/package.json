@@ -1,0 +1,14 @@
+{
+  "name": "internal-data-chatbot-tests",
+  "version": "1.0.0",
+  "description": "자동 테스트 러너 (browser/command 스위트 → tests/RESULTS.md)",
+  "type": "module",
+  "scripts": {
+    "setup": "npm install && npx playwright install chromium",
+    "test": "node run.mjs"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}

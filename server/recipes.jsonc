@@ -1,0 +1,49 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// 추출 레시피(recipe) 규칙 파일.  ※ 주석(//, /* */) 사용 가능(JSONC)
+//
+//   - 도메인별로 "어디를 읽고/버리고(scope), 어디서 데이터를 읽고(dataLayer),
+//     무엇을 가릴지(mask/deny)" 만 선언한다. 표/카드 구조화는 어댑터가 알아서 한다.
+//   - 서버가 매 요청마다 이 파일을 읽으므로, 저장만 하면 재시작 없이 즉시 반영된다.
+//   - 매칭되는(enabled:true + url 일치) recipe 가 여러 개면 priority 큰 것이 선택된다.
+//   - 매칭이 없으면 recipe 없이 어댑터/데이터레이어/텍스트 폴백이 그대로 동작한다.
+//
+// 아래 두 항목은 "예제"라 enabled:false 로 꺼져 있다(=아무 영향 없음).
+// 실제로 쓰려면 원하는 항목의 enabled 를 true 로 바꾸거나, 형태를 복사해 새 항목을 추가하면 된다.
+// ─────────────────────────────────────────────────────────────────────────────
+[
+  {
+    // ── 예제 1: 모든 필드를 보여주는 풀 샘플 ─────────────────────────────────
+    "name": "site-portal", // 식별자. 추출 source 에 recipe:site-portal 로 표기됨
+    "version": 1, // 레시피 버전(배포 추적용)
+    "enabled": false, // ★ true 로 바꾸면 활성화
+    "description": "예제 — 현장 포털 상세 화면",
+
+    // 언제 적용할지: url 패턴(glob '*' 또는 /정규식/, 배열은 OR) + domWhen(있을 때만)
+    "match": {
+      "url": ["*/portal/site*", "/erp\\.corp\\/site\\/\\d+/"],
+      "domWhen": ".site-portal" // 이 selector 가 화면에 있을 때만 적용(URL 같아도 화면 구분)
+    },
+    "priority": 10, // 여러 recipe 매칭 시 큰 값 우선
+
+    // 콘텐츠 영역: include 안만 읽고 exclude 는 버린다(구조화·텍스트·그리드·차트 모두에 적용)
+    "scope": {
+      "include": ["#contents", ".board-view"], // 본문 영역(비우면 화면 전체)
+      "exclude": ["nav", ".gnb", "footer", ".ads"] // 메뉴·광고 등 노이즈 제외
+    },
+
+    // 전체 데이터(가상스크롤 포함) 읽을 위치 힌트(MAIN world). 없으면 기본 window.GRID
+    "dataLayer": { "type": "global", "path": "window.GRID" },
+
+    "mask": [".ssn", ".tel"], // 매칭 요소 값을 *** 로 가림(LLM 전송 전, best-effort)
+    "deny": [".internal-only"] // 매칭 요소는 추출 자체 금지(전송 안 함)
+  },
+
+  {
+    // ── 예제 2: 최소 형태(로컬 데모에서 인사카드만 추출) ───────────────────
+    "name": "demo-localhost",
+    "enabled": false, // ★ true 로 바꾸면 데모(localhost)에서 인사카드만 추출
+    "description": "예제 — scope.include 시연(.empcard 만)",
+    "match": { "url": ["*localhost:8000*", "*127.0.0.1:8000*"] },
+    "scope": { "include": [".empcard"] }
+  }
+]
