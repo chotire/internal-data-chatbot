@@ -4,6 +4,9 @@
 const messagesEl = document.getElementById("messages");
 const statusEl = document.getElementById("status");
 const history = []; // 멀티턴 대화 이력(텍스트 Q&A)
+// 데모: 질문 간 독립(history off). 멀티턴 history를 평문으로 재구성하면 툴 활성 시 모델이
+// 직전 과제에 anchor돼 새 질문을 무시·재실행하는 오염이 있어 데모에선 끈다(필요 시 true).
+const SEND_HISTORY = false;
 
 function setStatus(text, cls = "") {
   statusEl.textContent = text;
@@ -65,20 +68,52 @@ document.getElementById("chat-form").addEventListener("submit", async (e) => {
     setStatus(`추출: ${sc.source || "?"} · 표 ${t} · 카드 ${s} · 차트 ${ch}`, "ok");
 
     loading.textContent = "답변 생성 중…";
-    const res = await fetch("/api/chat", {
+    const res = await fetch("/api/chat/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, screen_context: sc, history: history.slice(-8) }),
+      body: JSON.stringify({ question, screen_context: sc, history: SEND_HISTORY ? history.slice(-8) : [] }),
     });
-    if (!res.ok) throw new Error(`서버 오류 HTTP ${res.status}`);
-    const data = await res.json();
+    if (!res.ok || !res.body) throw new Error(`서버 오류 HTTP ${res.status}`);
+
+    // 스트리밍 답변 컨테이너: 툴 진행 칩(라우팅 가시화) + 답변 본문
     loading.classList.remove("loading");
-    loading.innerHTML = marked.parse(data.answer || "");
-    renderCharts(loading); // 답변 속 ```chart 블록 → 실제 Chart.js 차트
-    loading.appendChild(buildTrace(sc, data.trace));
+    loading.textContent = "";
+    const stepsEl = document.createElement("div");
+    stepsEl.className = "tool-steps";
+    const ansEl = document.createElement("div");
+    ansEl.className = "answer";
+    loading.append(stepsEl, ansEl);
+
+    let answerText = "";
+    let final = null;
+    await readSSE(res, (ev) => {
+      if (ev.type === "tool_start") {
+        addToolChip(stepsEl, ev.tool);
+      } else if (ev.type === "token") {
+        answerText += ev.text || "";
+        ansEl.innerHTML = marked.parse(answerText);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      } else if (ev.type === "final") {
+        final = ev;
+      } else if (ev.type === "error") {
+        throw new Error(ev.message || "스트리밍 오류");
+      }
+    });
+
+    ansEl.innerHTML = marked.parse(answerText || "(빈 응답)");
+    renderCharts(ansEl); // 답변 속 ```chart 블록 → 실제 Chart.js 차트
+    stepsEl.querySelectorAll(".tool-chip.running").forEach((c) => {
+      c.classList.remove("running");
+      c.textContent = TOOL_LABEL[c.dataset.tool] || c.dataset.tool;
+    });
+    if (final) {
+      loading.appendChild(buildBadges(final.tools_used, final.citations)); // 출처(기계적 추적)
+      loading.appendChild(buildTrace(sc, final.trace));
+    }
+    setStatus("완료", "ok");
     // 멀티턴: 이번 Q&A 를 이력에 누적 (텍스트만)
     history.push({ role: "user", content: question });
-    history.push({ role: "assistant", content: data.answer || "" });
+    history.push({ role: "assistant", content: answerText });
   } catch (err) {
     loading.classList.remove("loading");
     loading.classList.add("error");
@@ -86,6 +121,100 @@ document.getElementById("chat-form").addEventListener("submit", async (e) => {
     setStatus("오류", "err");
   }
 });
+
+// --- 툴-콜링 스트리밍(SSE) -------------------------------------------------
+// 출처/툴 라벨. screen_data 는 호출형 툴이 아니라 '화면만으로 답함'을 뜻함.
+const TOOL_LABEL = {
+  screen_data: "📊 화면 데이터",
+  code_interpreter: "🧮 데이터 분석",
+  web_search: "🌐 웹 검색",
+};
+
+// SSE(text/event-stream) 본문을 읽어 "data: {json}" 블록마다 onEvent 호출.
+async function readSSE(res, onEvent) {
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const block = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      const line = block.split("\n").find((l) => l.startsWith("data:"));
+      if (!line) continue;
+      const payload = line.slice(5).trim();
+      if (!payload) continue;
+      let ev;
+      try { ev = JSON.parse(payload); } catch { continue; }
+      onEvent(ev); // throw 하면 호출부 catch 로 전파(error 이벤트 처리)
+    }
+  }
+}
+
+// 진행 중 툴 칩(라우팅을 눈에 보이게). 같은 툴은 한 번만.
+function addToolChip(stepsEl, tool) {
+  if (stepsEl.querySelector(`.tool-chip[data-tool="${tool}"]`)) return;
+  const chip = document.createElement("span");
+  chip.className = "tool-chip running";
+  chip.dataset.tool = tool;
+  chip.textContent = (TOOL_LABEL[tool] || tool) + " …";
+  stepsEl.appendChild(chip);
+}
+
+// 한 배지 요소.
+function badgeEl(t) {
+  const b = document.createElement("span");
+  b.className = "badge badge-" + t;
+  b.textContent = TOOL_LABEL[t] || t;
+  return b;
+}
+
+// 라벨 + 배지들을 한 줄 그룹으로.
+function badgeGroup(label, items) {
+  const row = document.createElement("div");
+  row.className = "badge-row";
+  const lbl = document.createElement("span");
+  lbl.className = "src-label";
+  lbl.textContent = label;
+  row.appendChild(lbl);
+  items.forEach((it) => row.appendChild(it));
+  return row;
+}
+
+// 출처 vs 도구를 구분해 표기.
+//  - 도구 : 호출한 것(🧮 데이터 분석 · 🌐 웹 검색)
+//  - 출처 : 답의 근거 데이터(📊 화면 데이터 + 🌐 웹 결과의 인용 URL)
+function buildBadges(tools, citations) {
+  const wrap = document.createElement("div");
+  wrap.className = "source-badges";
+  const used = tools || [];
+  const toolsUsed = used.filter((t) => t !== "screen_data"); // 호출 툴
+  const hasScreen = used.includes("screen_data");
+  const hasCites = !!(citations && citations.length);
+
+  // 도구 그룹
+  if (toolsUsed.length) {
+    wrap.appendChild(badgeGroup("도구", toolsUsed.map(badgeEl)));
+  }
+  // 출처 그룹 (화면 데이터 배지 + 웹 인용 URL)
+  if (hasScreen || hasCites) {
+    const srcItems = hasScreen ? [badgeEl("screen_data")] : [];
+    const group = badgeGroup("출처", srcItems);
+    if (hasCites) {
+      const cites = document.createElement("span");
+      cites.className = "citations";
+      cites.innerHTML = citations
+        .map((c, i) => `<a href="${esc(c.url)}" target="_blank" rel="noopener">[${i + 1}] ${esc(c.title || c.url)}</a>`)
+        .join(" ");
+      group.appendChild(cites);
+    }
+    wrap.appendChild(group);
+  }
+  return wrap;
+}
 
 // --- 답변 속 ```chart 블록을 실제 차트로 렌더링 ------------------------------
 const CHART_PALETTE = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6"];

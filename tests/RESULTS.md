@@ -1,13 +1,14 @@
 # 테스트 결과 — internal-data-chatbot
 
-> 2026-06-26 03:03:20 UTC · node tests/run.mjs
-> **전체: 18 PASS / 0 FAIL / 0 SKIP** (18 케이스, 3 스위트)
+> 2026-06-26 08:21:28 UTC · node tests/run.mjs
+> **전체: 19 PASS / 0 FAIL / 0 SKIP** (19 케이스, 4 스위트)
 
 ## 요약
 
 | 스위트 | 유형 | PASS | FAIL | SKIP |
 |---|---|---:|---:|---:|
 | 서버 recipe 검증(매칭·JSONC·스키마) | command | 1 | 0 | 0 |
+| 서버 툴-콜링/스트리밍 검증(이벤트 매핑·SSE) | command | 1 | 0 | 0 |
 | 핵심 어댑터 추출 | browser | 7 | 0 | 0 |
 | recipe 추출 파이프라인 | browser | 10 | 0 | 0 |
 
@@ -18,6 +19,14 @@ uv run python tests/server/test_recipes.py — 종료코드 0=성공.
 | # | 시나리오 | 기대 | 결과 | 비고 |
 |---|---|---|---|---|
 | S1 | URL 매칭/JSONC 파싱/스키마 검증 | 파이썬 체크 전부 통과(exit 0) | ✅ PASS | 8/8 통과 |
+
+## 서버 툴-콜링/스트리밍 검증(이벤트 매핑·SSE)  `server-stream`
+
+uv run python tests/server/test_stream.py — 종료코드 0=성공. stream_answer 이벤트 매핑·citations·_build_messages·/api/chat/stream SSE 프레이밍(OpenAI 스텁).
+
+| # | 시나리오 | 기대 | 결과 | 비고 |
+|---|---|---|---|---|
+| ST1 | 툴-콜링 이벤트 매핑/citations/SSE 프레이밍 | 파이썬 체크 전부 통과(exit 0) | ✅ PASS | 24/24 통과 |
 
 ## 핵심 어댑터 추출  `core-extract`
 

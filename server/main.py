@@ -10,8 +10,10 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from server import llm
@@ -31,8 +33,25 @@ async def no_cache(request, call_next):
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
+    # v0.2 비스트리밍(폴백). 현재 UI 는 /api/chat/stream 을 사용한다.
     r = llm.answer_question(req.question, req.screen_context, req.history)
     return ChatResponse(answer=r["answer"], trace=r["trace"])
+
+
+@app.post("/api/chat/stream")
+def chat_stream(req: ChatRequest) -> StreamingResponse:
+    """v0.3 PoC: 툴-콜링 + 스트리밍. SSE 로 tool_start/token/final/error 이벤트를 흘려보낸다.
+    이벤트 계약은 docs/architecture/v0.3-direction.md §6.
+    """
+    def gen():
+        for ev in llm.stream_answer(req.question, req.screen_context, req.history):
+            yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/api/recipe")

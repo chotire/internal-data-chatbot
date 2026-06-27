@@ -8,9 +8,10 @@
 import { runAll } from "./lib/runner.mjs";
 import recipeSchema from "./suites/recipe-schema.mjs";
 import serverRecipe from "./suites/server-recipe.mjs";
+import serverStream from "./suites/server-stream.mjs";
 import coreExtract from "./suites/core-extract.mjs";
 
-const SUITES = [serverRecipe, coreExtract, recipeSchema];
+const SUITES = [serverRecipe, serverStream, coreExtract, recipeSchema];
 
 const filter = process.argv.slice(2);
 const suites = filter.length ? SUITES.filter((s) => filter.includes(s.id)) : SUITES;

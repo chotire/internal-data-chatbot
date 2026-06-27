@@ -46,6 +46,26 @@ body {
 .msg.bot code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 .msg.bot strong { color: #fff; }
 
+/* 툴-콜링: 진행 칩(라우팅 가시화) + 출처 배지 */
+.tool-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.tool-steps:empty { display: none; }
+.tool-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); }
+.tool-chip.running { color: var(--text); border-color: var(--accent); animation: chip-pulse 1.1s ease-in-out infinite; }
+@keyframes chip-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.source-badges { display: flex; flex-direction: column; gap: 4px;
+  margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.badge-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.source-badges .src-label { font-size: 11px; color: var(--text-dim); min-width: 26px; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); }
+.badge-screen_data { background: rgba(59,130,246,0.15); border-color: var(--accent); }
+.badge-code_interpreter { background: rgba(16,185,129,0.15); border-color: #10b981; }
+.badge-web_search { background: rgba(245,158,11,0.15); border-color: #f59e0b; }
+.citations { flex-basis: 100%; font-size: 11px; margin-top: 2px; }
+.citations a { color: var(--accent); margin-right: 8px; text-decoration: none; }
+.citations a:hover { text-decoration: underline; }
+
 /* 답변 속 실제 차트 */
 .chat-chart { height: 200px; background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 8px; margin: 8px 0; min-width: 0; }
