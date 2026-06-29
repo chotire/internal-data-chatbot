@@ -19,6 +19,8 @@ Claude Code가 이 저장소에서 작업할 때 항상 지켜야 할 **규칙·
 | [docs/architecture/README.md](docs/architecture/README.md) | 버전 인덱스 |
 | [docs/architecture/v0.2-current-build.md](docs/architecture/v0.2-current-build.md) | **현재 구현(as-built)** — 어댑터·MAIN world·recipe·테스트·배포 상세 |
 | [docs/architecture/v0.3-direction.md](docs/architecture/v0.3-direction.md) | **향후 방향 + PoC 데모** — 채널/AI 서비스 분리, 3툴 확장성, 라우팅·출처·스트리밍 |
+| [docs/architecture/v0.4-action-agent.md](docs/architecture/v0.4-action-agent.md) | **행동 에이전트(김반장)** — UI 운전·HITL·게이트·지식그래프·지속 업데이트 |
+| [docs/glossary.md](docs/glossary.md) | 용어집(MV3·a11y·LangGraph·MCP·그래프DB 등) |
 
 > 작업 전 관련 버전 문서를 먼저 확인할 것. v0.2 = 지금 동작하는 것, v0.3 = 지향점.
 
@@ -45,6 +47,7 @@ deploy/    엔터프라이즈 배포 템플릿(.crx/update.xml/ForceList)
 - **Python**: PEP8·타입힌트·작은 함수, FastAPI 관용구 우선. **프롬프트는 `llm.py` 한곳**. 비밀키·모델명은 **환경변수**.
 - **JS(익스텐션)**: 빌드 도구 없이 순수 JS. 어댑터는 공통 인터페이스(`detect`/`extract`).
 - **PoC 원칙**: 과한 추상화 금지, **"동작하는 가장 단순한 형태" 우선**, 주변 코드 스타일에 맞춤.
+- **한국어 글쓰기(문서·슬라이드·UI·주석)**: 사람이 읽는 산문은 **주어·서술어가 있는 완결된 문장**으로 쓴다. 명사로 끊는 **개조식·전보체 단편 나열 금지**(예: "직접 소유", "에너지는 무기에"). 표·불릿의 *항목*은 짧은 구 OK, 하지만 **콜아웃·설명 문장**은 자연스러운 문장으로. 영어/전문용어를 한국어 문장에 억지로 끼우지 말 것(예: commodity를 "상품"으로) — 쉬운 말 + 필요한 정밀 용어는 괄호 병기. **작성 후 소리 내어 읽어 어색하면 고친다.**
 
 ## 5. 보안·거버넌스 (필수)
 

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>행동 에이전트 (김반장) — 아키텍처 v0.4</title>
+<link rel="stylesheet" href="assets/theme.css" />
+<link rel="stylesheet" href="assets/deck.css" />
+</head>
+<body>
+<div class="topbar"><div class="progress" id="progress"></div></div>
+<div class="brandmark"><span class="dot"></span> 김반장 · 행동 에이전트 v0.4</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1. Title -->
+  <section class="slide active">
+    <div class="kicker">Architecture v0.4 · 행동 에이전트</div>
+    <h1>화면을 <span class="em">읽는</span> 챗봇에서<br><span class="grad">조작하는 에이전트</span>로</h1>
+    <p class="lead">사용자 대신 사내 화면을 조작해 <b>조회·수정·등록·삭제</b>까지. 클로드 인 크롬 수준의 행동 + 우리만의 도메인 최적화.</p>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.4rem;">
+      <span class="tag good">UI 조작</span><span class="tag">HITL</span>
+      <span class="tag">지식 그래프</span><span class="tag warn">지속 업데이트</span>
+    </div>
+  </section>
+
+  <!-- 2. 목표 & 무기 -->
+  <section class="slide">
+    <div class="kicker">무엇이 다른가</div>
+    <h2>범용 브라우저 행동 + <span class="em">사내 도메인 최적화</span></h2>
+    <div class="cols cols-3">
+      <div class="card">
+        <h3><span class="ico">🗺️</span> 사내 지식 그래프</h3>
+        <p>범용 모델엔 <b>없는</b> 우리 레거시의 메뉴·화면·폼을 그래프로 축적.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🎯</span> 도메인 정식 코드 찾기</h3>
+        <p>"볼펜 → 정식 품목코드", 결재 규칙을 <b>회사 데이터</b>로 해결.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🛡️</span> 엔터프라이즈 거버넌스</h3>
+        <p>마스킹·감사·허용목록. 범용 제품이 안 해주는 것.</p>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1.4rem;">
+      범용 브라우저 조작 루프는 이미 오픈소스에 많으니(nanobrowser 등) <b>참고만</b> 하고, <b>액션층은 우리가 직접 만들어</b> 도메인 최적화 같은 <i>우리만의 무기</i>에 집중합니다.
+    </div>
+  </section>
+
+  <!-- 3. 핵심 결정: UI 조작 -->
+  <section class="slide">
+    <div class="kicker">핵심 결정 · API vs UI</div>
+    <h2>진짜 <span class="em">저장 버튼</span>을 누른다</h2>
+    <table>
+      <thead><tr><th>방식</th><th>무결성</th><th>인증</th><th>치명적 단점</th></tr></thead>
+      <tbody>
+        <tr><td>API 직접 호출</td><td><span class="tag bad">위험</span></td><td>토큰 책임</td><td>검증·워크플로 건너뜀 · <b>알림·결재·채번 누락</b></td></tr>
+        <tr><td>API 콜 재현</td><td><span class="tag warn">시퀀스 누락</span></td><td>—</td><td>단일 콜만 재현 시 상태 깨짐 · 암호화 페이로드</td></tr>
+        <tr><td><b>UI 조작(버튼 클릭)</b> ★</td><td><span class="tag good">안전</span></td><td><span class="tag good">세션 상속</span></td><td>DOM 취약 → 채움 난이도로 이동</td></tr>
+      </tbody>
+    </table>
+    <div class="callout green" style="margin-top:1.2rem;">
+      저장을 클릭하면 페이지가 내부 호출·알림·결재·채번을 <b>정상적으로 수행합니다</b>. 반면 API를 직접 호출하면 그 중간 이벤트가 <b>누락되는데</b>, 이것이 API 방식을 버린 결정적 이유입니다.
+    </div>
+  </section>
+
+  <!-- 4. 행동 2종류 + 게이트 -->
+  <section class="slide">
+    <div class="kicker">안전의 기준 · 쉬운 말로</div>
+    <h2><span class="em">다시 하면 되는</span> 것과 <span class="em">한 번 하면 끝</span>인 것</h2>
+    <div class="cols cols-2">
+      <div class="card">
+        <h3>↩️ 다시 하면 되는 행동</h3>
+        <p>보기·이동·검색·입력폼 채우기(저장 전). 틀려도 다시 하면 끝 → <b>마음껏 자동.</b></p>
+      </div>
+      <div class="card">
+        <h3>⚠️ 한 번 하면 끝인 행동</h3>
+        <p>저장·삭제. 누르면 못 되돌림 → <b>신중</b>(확인 한 번·금액 상한).</p>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1.3rem;">
+      에이전트는 행동을 하기 전에 매번 "물어볼지, 그냥 할지"를 정하는데, 이때 <b>위험등급·신뢰도·모드</b>를 함께 봅니다. 사용자를 답답하게 하는 건 마지막 저장이 아니라 <b>중간의 잦은 확인들</b>인데, 에이전트가 <b>그래프 DB에 경험을 쌓을수록</b> 이런 확인이 줄어듭니다.
+    </div>
+  </section>
+
+  <!-- 5. 아키텍처 한눈에 -->
+  <section class="slide">
+    <div class="kicker">구조 · 한눈에</div>
+    <h2>익스텐션(손·눈) · 에이전트(계획) · 그래프DB/메모리</h2>
+    <div class="pipe">
+      <div class="stage s-ext">
+        <div class="stnum">손·눈</div>
+        <h4><span>🧩</span> 익스텐션 (김반장)</h4>
+        <ul><li>화면 인식</li><li>실제 <b>조작</b>(클릭·입력)</li><li>거버넌스</li><li>사용자 세션</li></ul>
+      </div>
+      <div class="conn">⇄</div>
+      <div class="stage s-ai">
+        <div class="stnum">계획·판단</div>
+        <h4><span>🧠</span> 에이전트 (LangGraph)</h4>
+        <ul><li>의도 파싱·계획</li><li>정식 코드 찾기(예: 볼펜)</li><li>HITL 판단</li><li>결과 검증(성공/오류)</li></ul>
+      </div>
+      <div class="conn">⇄</div>
+      <div class="stage s-srv">
+        <div class="stnum">지식</div>
+        <h4><span>🗄️</span> 그래프DB/메모리</h4>
+        <ul><li>화면·이동 그래프</li><li>폼 스키마</li><li>정식 코드 찾기·성공 기억</li></ul>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1.2rem;">
+      둘은 <b>양방향</b>으로 주고받습니다. 에이전트가 명령을 내리면 익스텐션이 실행하고 관찰 결과를 돌려줍니다. 계획은 에이전트가 세우고, 실제 화면 조작은 익스텐션(손·눈)이 합니다.
+    </div>
+  </section>
+
+  <!-- 6. 모듈 역할 -->
+  <section class="slide">
+    <div class="kicker">역할 분담</div>
+    <h2>정하는 건 <span class="em">에이전트</span>, 하는 건 <span class="em">익스텐션</span></h2>
+    <div class="cols cols-2">
+      <div class="card">
+        <h3><span class="ico">🧩</span> 익스텐션 (손·눈)</h3>
+        <p><b>DataExtractor·FormExtractor</b> 화면·폼 인식 · <b>ActionExecutor</b> 실제 폼 입력·클릭 · <b>GovernancePlane</b> 마스킹·감사</p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🧠</span> 에이전트 (계획)</h3>
+        <p><b>IntentParser·Planner·Resolver</b> 계획·정식 코드 찾기 · <b>Orchestrator·Gate·Verifier</b> 진행·결정·검증 · <b>MemoryWriter</b></p>
+      </div>
+    </div>
+    <div class="callout green" style="margin-top:1.3rem;">
+      핵심은 <b>fill-plan</b>입니다. "어느 칸에 무슨 값"을 <b>검사할 수 있는 계획</b>으로 먼저 만들기 때문에, 안전·HITL·테스트가 한 번에 해결됩니다.
+    </div>
+  </section>
+
+  <!-- 7. 실행 순서 -->
+  <section class="slide">
+    <div class="kicker">한 작업이 흐르는 법 · 등록 예시</div>
+    <h2>이동 → 인식 → 정식 코드 찾기 → 채움 → 확인 → <span class="em">저장</span> → 검증</h2>
+    <div class="rmap">
+      <div class="row"><div class="ver">①</div><div><h3>이동</h3><p>그래프 경로로 목적 화면 도달(딥링크 / 메뉴 / 사람).</p></div></div>
+      <div class="row"><div class="ver">②</div><div><h3>인식</h3><p>FormContext 추출 — 품목 검색위젯·수량·라인그리드·저장버튼.</p></div></div>
+      <div class="row"><div class="ver">③</div><div><h3>정식 코드 찾기</h3><p>"볼펜" → 정식 품목코드(검색위젯). 모호하면 HITL로 고르기.</p></div></div>
+      <div class="row"><div class="ver">④</div><div><h3>채움</h3><p>안전 주입으로 라인 입력(controlled input 대응).</p></div></div>
+      <div class="row now"><div class="ver">⑤</div><div><h3>확인</h3><p>fill-plan 미리보기 → 사용자 승인(되돌릴 수 없는 직전).</p></div></div>
+      <div class="row"><div class="ver">⑥</div><div><h3>저장</h3><p>클릭 — 페이지가 알림·결재·채번을 정상 수행.</p></div></div>
+      <div class="row"><div class="ver">⑦</div><div><h3>검증</h3><p>결과(레코드ID/에러) 확인 → 성공을 메모리에 적재.</p></div></div>
+    </div>
+  </section>
+
+  <!-- 8. 모든 요청 한 루프 -->
+  <section class="slide">
+    <div class="kicker">등록만이 아니다</div>
+    <h2>조회·수정·등록·삭제 = <span class="em">같은 루프</span></h2>
+    <table>
+      <thead><tr><th>요청</th><th>한 번 하면 끝(저장)</th><th>도입 순서 · 이유</th></tr></thead>
+      <tbody>
+        <tr><td><b>조회</b></td><td><span class="tag good">없음</span></td><td>1순위 — 가장 안전·빈번, v0.2 읽기 재활용</td></tr>
+        <tr><td><b>수정</b></td><td>1번</td><td>2순위 — 기존 레코드 기반, diff 확인이 자연스러움</td></tr>
+        <tr><td><b>등록</b></td><td>1번</td><td>3순위</td></tr>
+        <tr><td><b>삭제·승인</b></td><td><span class="tag warn">매우 신중</span></td><td>4순위 — 가장 높은 게이트</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" style="margin-top:1.2rem;">
+      요청 종류마다 따로 프로그램을 만들지 않습니다. <b>에이전트가 같은 기본 동작</b>(이동·검색·채우기·클릭)을 요청에 맞게 조합할 뿐입니다. 그래서 저장이 없는 <b>조회</b>는 끝까지 자동으로 흐르고, 저장이 있는 <b>수정·등록·삭제</b>에서만 마지막에 "이대로 저장할까요?" 확인이 들어갑니다.
+    </div>
+  </section>
+
+  <!-- 9. 네비게이션 -->
+  <section class="slide">
+    <div class="kicker">어떻게 화면에 가나</div>
+    <h2>길은 주되, <span class="em">상태를 보며</span> 간다</h2>
+    <div class="cols cols-3">
+      <div class="card">
+        <h3>1️⃣ 딥링크</h3>
+        <p>있으면 → 그 화면으로 직행. 가장 빠르고 튼튼.</p>
+      </div>
+      <div class="card">
+        <h3>2️⃣ 메뉴 자동 조작</h3>
+        <p>딥링크 없으면(웹스퀘어) 그래프의 <b>클릭 경로</b>(대&gt;중&gt;소)를 따라감.</p>
+      </div>
+      <div class="card">
+        <h3>3️⃣ 사람 핸드오프</h3>
+        <p>막히면 "그 화면으로 가주세요" → <b>도착 감지</b> 후 이어받기.</p>
+      </div>
+    </div>
+    <div class="callout warn" style="margin-top:1.3rem;">
+      에이전트가 목적 화면으로 <b>직접 이동</b>하고 그 과정을 사용자가 지켜봅니다. 모호하거나 되돌릴 수 없는 지점에서는 <b>사용자가 직접 확인</b>합니다.
+    </div>
+  </section>
+
+  <!-- 10. 지식 그래프 -->
+  <section class="slide">
+    <div class="kicker">우리의 무기</div>
+    <h2>모델에 없는 <span class="grad">사내 사전 지식</span>을 그래프로</h2>
+    <div class="cols cols-3">
+      <div class="card"><h3>● 노드</h3><p>화면·상태(목록·상세·폼).</p></div>
+      <div class="card"><h3>→ 엣지</h3><p>이동 = <b>클릭 경로</b>(딥링크 없으니 URL 아닌 시퀀스).</p></div>
+      <div class="card"><h3>▤ 폼 스키마</h3><p>필드·필수·옵션·스텝 → fill-plan에 사용.</p></div>
+    </div>
+    <div class="callout green" style="margin-top:1.3rem;">
+      클로드 인 크롬은 GitHub를 학습으로 이미 알지만, 우리 사내 시스템은 모릅니다. <b>그 빈자리를 우리 그래프가 채웁니다.</b> 그래서 이동은 헤매는 탐색이 아니라 그래프 경로 탐색이 됩니다.
+    </div>
+  </section>
+
+  <!-- 11. 지속 업데이트 -->
+  <section class="slide">
+    <div class="kicker">변하는 화면 따라잡기</div>
+    <h2>능동 부트스트랩 + <span class="em">수동 유지</span></h2>
+    <div class="cols cols-2">
+      <div class="card">
+        <h3>① 능동 (도입 시 1회)</h3>
+        <p>메뉴·목록·<b>빈 폼</b>까지 <b>이동만</b> 하며 그래프 생성. 빠른 커버리지.</p>
+      </div>
+      <div class="card">
+        <h3>② 수동 (실사용 중 상시)</h3>
+        <p>라이브 화면 vs 저장 그래프 <b>diff</b> → 자동 갱신/추가. 쓰면서 자란다.</p>
+      </div>
+    </div>
+    <div class="callout warn" style="margin-top:1.3rem;">
+      능동 크롤은 <b>"이동만"</b> 합니다. 저장·삭제·승인처럼 데이터를 <b>바꾸는 버튼은 절대 누르지 않습니다</b>(실제 거래가 발생하니까요). 이를 위해 금지 버튼 목록·읽기 전용 권한·관리자 감독을 둡니다.
+    </div>
+  </section>
+
+  <!-- 12. 거버넌스 & 단계 -->
+  <section class="slide">
+    <div class="kicker">안전 + 로드맵</div>
+    <h2>안전하게, <span class="em">가치 먼저</span></h2>
+    <div class="cols cols-2">
+      <div class="card">
+        <h3><span class="ico">🛡️</span> 거버넌스</h3>
+        <p>세션 권한 <b>상속</b>(새 인증 0) · 마스킹 · <b>미리보기 후 사람이 저장</b> · 감사로그 · 인젝션 가드.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🪜</span> 단계 (위험 낮은 데서)</h3>
+        <p>데모폼 PoC → <b>조회</b> → 수정 → 등록 → 삭제 → 지식그래프 가동.</p>
+      </div>
+    </div>
+    <div class="callout green" style="margin-top:1.3rem;">
+      클로드 인 크롬을 따라 하는 데는 힘을 <b>적게</b> 쓰고, 우리만의 무기(<b>지식 그래프·도메인 최적화·거버넌스</b>)에 힘을 <b>집중</b>합니다.
+    </div>
+  </section>
+
+</div>
+
+<div class="dots" id="dots"></div>
+<div class="nav">
+  <button id="prev" aria-label="이전">‹</button>
+  <span class="counter" id="counter">1 / 12</span>
+  <button id="next" aria-label="다음">›</button>
+</div>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>F</kbd> 전체화면</div>
+
+<script src="assets/deck.js"></script>
+</body>
+</html>

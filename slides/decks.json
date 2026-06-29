@@ -1,0 +1,18 @@
+[
+  {
+    "file": "overview.html",
+    "version": "개요",
+    "title": "화면-인지형 챗봇 아키텍처 브리핑",
+    "desc": "전체 그림(익스텐션 + 플러그러블 어댑터 + MAIN world)과 v0.2→v0.6 로드맵. 지속 업데이트.",
+    "status": "current",
+    "doc": "../docs/architecture/README.md"
+  },
+  {
+    "file": "v0.4-action-agent.html",
+    "version": "v0.4",
+    "title": "행동 에이전트 (김반장)",
+    "desc": "UI 조작·HITL·지식그래프·지속 업데이트. 조회/수정/등록/삭제를 한 루프로.",
+    "status": "current",
+    "doc": "../docs/architecture/v0.4-action-agent.md"
+  }
+]

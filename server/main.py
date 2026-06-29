@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from server import llm
@@ -73,10 +73,14 @@ def chat_ui() -> FileResponse:
 
 @app.get("/slides")
 @app.get("/slides.html")
-def slides() -> FileResponse:
-    """아키텍처 브리핑 슬라이드(공유용)."""
-    return FileResponse("slides.html")
+def slides_redirect() -> RedirectResponse:
+    """레거시 경로 → 비주얼 문서 목차로."""
+    return RedirectResponse("/slides/")
 
 
 # 챗봇 UI 정적 자산 (/static/chat/chat.js 등)
 app.mount("/static", StaticFiles(directory="server/web"), name="static")
+
+# 비주얼 문서(슬라이드 데크) — /slides/ = 목차, /slides/<deck>.html = 각 데크.
+# 데크 추가 = slides/ 에 파일 + decks.json 항목만(서버 코드 변경 불필요).
+app.mount("/slides", StaticFiles(directory="slides", html=True), name="slides")

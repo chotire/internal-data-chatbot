@@ -1,0 +1,17 @@
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #161b22;
+    --bg-elev2: #1c2330;
+    --border: #2b3340;
+    --text: #e6edf3;
+    --text-dim: #9aa7b4;
+    --text-faint: #6b7785;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --accent3: #f0a868;
+    --danger: #ff7b72;
+    --purple: #d2a8ff;
+    --code-bg: #0a0e14;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
