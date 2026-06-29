@@ -1,6 +1,6 @@
 # 테스트 결과 — internal-data-chatbot
 
-> 2026-06-26 08:21:28 UTC · node tests/run.mjs
+> 2026-06-29 07:27:40 UTC · node tests/run.mjs
 > **전체: 19 PASS / 0 FAIL / 0 SKIP** (19 케이스, 4 스위트)
 
 ## 요약
@@ -26,7 +26,7 @@ uv run python tests/server/test_stream.py — 종료코드 0=성공. stream_answ
 
 | # | 시나리오 | 기대 | 결과 | 비고 |
 |---|---|---|---|---|
-| ST1 | 툴-콜링 이벤트 매핑/citations/SSE 프레이밍 | 파이썬 체크 전부 통과(exit 0) | ✅ PASS | 24/24 통과 |
+| ST1 | 툴-콜링 이벤트 매핑/citations/SSE 프레이밍 | 파이썬 체크 전부 통과(exit 0) | ✅ PASS | 26/26 통과 |
 
 ## 핵심 어댑터 추출  `core-extract`
 

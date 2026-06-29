@@ -8,6 +8,17 @@ const history = []; // 멀티턴 대화 이력(텍스트 Q&A)
 // 직전 과제에 anchor돼 새 질문을 무시·재실행하는 오염이 있어 데모에선 끈다(필요 시 true).
 const SEND_HISTORY = false;
 
+// 개발 전용 기능("어떻게 답했나" trace · "추출 영역" 버튼)은 서버 설정(UDC_DEV_MODE)으로 on/off.
+// 기본 false(프로덕션 안전). 서버에서 받아 갱신.
+let DEV_MODE = false;
+fetch("/api/config")
+  .then((r) => r.json())
+  .then((c) => {
+    DEV_MODE = !!c.devMode;
+    if (!DEV_MODE) document.getElementById("hl-btn")?.classList.add("hidden");
+  })
+  .catch(() => {});
+
 function setStatus(text, cls = "") {
   statusEl.textContent = text;
   statusEl.className = "status " + cls;
@@ -108,7 +119,7 @@ document.getElementById("chat-form").addEventListener("submit", async (e) => {
     });
     if (final) {
       loading.appendChild(buildBadges(final.tools_used, final.citations)); // 출처(기계적 추적)
-      loading.appendChild(buildTrace(sc, final.trace));
+      if (DEV_MODE && final.trace) loading.appendChild(buildTrace(sc, final.trace)); // "어떻게 답했나"는 개발 전용
     }
     setStatus("완료", "ok");
     // 멀티턴: 이번 Q&A 를 이력에 누적 (텍스트만)

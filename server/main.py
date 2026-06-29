@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from server import llm
+from server import config, llm
 from server.schemas import ChatRequest, ChatResponse
 from server.recipes import get_recipe_for_url
 
@@ -26,9 +26,17 @@ app = FastAPI(title="Universal Data Chatbot (v0.2)")
 @app.middleware("http")
 async def no_cache(request, call_next):
     # 챗봇 UI/정적 자산은 서버 배포로 갱신되므로 항상 최신을 받도록 캐시 금지(개발 편의).
+    # 프로덕션에선 캐시 허용(자산은 ?v= 쿼리로 캐시버스팅) → DEV_MODE 일 때만 적용.
     resp = await call_next(request)
-    resp.headers["Cache-Control"] = "no-store"
+    if config.settings.dev_mode:
+        resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+@app.get("/api/config")
+def app_config() -> dict:
+    """챗 UI 가 개발 전용 기능(어떻게 답했나·추출 영역) 표시 여부를 알기 위한 플래그."""
+    return {"devMode": config.settings.dev_mode}
 
 
 @app.post("/api/chat", response_model=ChatResponse)

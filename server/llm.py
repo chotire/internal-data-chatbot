@@ -7,16 +7,14 @@
 from __future__ import annotations
 
 import json
-import os
 import time
+import traceback
 from datetime import date
 
-from dotenv import load_dotenv
 from openai import OpenAI
 
+from server import config
 from server.schemas import ScreenContext
-
-load_dotenv()
 
 _client: OpenAI | None = None
 
@@ -24,7 +22,7 @@ _client: OpenAI | None = None
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
-        api_key = os.environ.get("OPENAI_API_KEY")
+        api_key = config.settings.openai_api_key
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY 가 설정되지 않았습니다. .env 를 확인하세요.")
         _client = OpenAI(api_key=api_key)
@@ -67,10 +65,14 @@ SYSTEM_PROMPT = """당신은 사용자가 보는 웹 화면 데이터를 근거�
 #
 # 주의: 네이티브 툴 타입명/모델 지원은 OpenAI API 변동이 잦다. web_search 가 거부되면
 #       "web_search_preview" 로, 모델은 툴 지원 모델(gpt-4o 계열 등)로 .env OPENAI_MODEL 설정.
-TOOLS = [
-    {"type": "web_search"},
-    {"type": "code_interpreter", "container": {"type": "auto"}},
-]
+def _build_tools() -> list[dict]:
+    """설정(enable_web_search·enable_code_interpreter)에 따라 켤 네이티브 툴 목록을 만든다."""
+    tools: list[dict] = []
+    if config.settings.enable_web_search:
+        tools.append({"type": "web_search"})
+    if config.settings.enable_code_interpreter:
+        tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
+    return tools
 
 TOOL_SYSTEM_PROMPT = """당신은 사용자가 보는 웹 화면 데이터를 근거로 답하는 어시스턴트입니다. 아래 도구를 쓸 수 있습니다.
 
@@ -110,7 +112,7 @@ def _build_messages(question: str, screen_context: ScreenContext, history: list 
     data_json = json.dumps(screen_context.model_dump(), ensure_ascii=False)
     user = f"[현재 화면 데이터]\n{data_json}\n\n[질문]\n{question}"
     items: list = []
-    for m in (history or [])[-8:]:  # 최근 4쌍만
+    for m in (history or [])[-config.settings.history_turns:]:  # 최근 history_turns 개
         role, content = m.get("role"), m.get("content")
         if role in ("user", "assistant") and content:
             items.append({"role": role, "content": str(content)})
@@ -139,40 +141,66 @@ def stream_answer(question: str, screen_context: ScreenContext, history: list | 
       {"type":"final","tools_used":[...],"citations":[...],"trace":{...}} | {"type":"error","message":...}
     """
     system, items = _build_messages(question, screen_context, history)
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = config.settings.openai_model
     user_payload = items[-1]["content"]
     has_screen = bool(screen_context.tables or screen_context.sections or screen_context.charts)
 
     fired: list[str] = []   # 실제 호출된 호스티드 툴(기계적 추적 → 출처 배지)
     seen_tool: set[str] = set()
     t0 = time.perf_counter()
-    try:
-        client = _get_client()
-        with client.responses.stream(
-            model=model,
-            instructions=system,
-            input=items,
-            tools=TOOLS,
-            temperature=0.2,
-        ) as stream:
-            for event in stream:
-                et = getattr(event, "type", "") or ""
-                if et == "response.output_text.delta":
-                    yield {"type": "token", "text": getattr(event, "delta", "") or ""}
-                    continue
-                tool = None
-                if "web_search" in et:
-                    tool = "web_search"
-                elif "code_interpreter" in et:
-                    tool = "code_interpreter"
-                if tool and tool not in seen_tool:
-                    seen_tool.add(tool)
-                    fired.append(tool)
-                    yield {"type": "tool_start", "tool": tool}
-            final = stream.get_final_response()
-    except Exception as e:  # noqa: BLE001 — PoC: 어떤 실패든 사용자에게 표시
-        yield {"type": "error", "message": f"{type(e).__name__}: {e}"}
-        return
+    final = None
+    MAX_RETRIES = config.settings.max_retries
+    for attempt in range(MAX_RETRIES + 1):
+        fired.clear()
+        seen_tool.clear()
+        yielded = False  # 토큰/툴 이벤트를 하나라도 내보냈나(보냈으면 재시도 못 함)
+        try:
+            client = _get_client()
+            with client.responses.stream(
+                model=model,
+                instructions=system,
+                input=items,
+                tools=_build_tools(),
+                temperature=config.settings.openai_temperature,
+            ) as stream:
+                for event in stream:
+                    et = getattr(event, "type", "") or ""
+                    if et == "response.output_text.delta":
+                        yielded = True
+                        yield {"type": "token", "text": getattr(event, "delta", "") or ""}
+                        continue
+                    tool = None
+                    if "web_search" in et:
+                        tool = "web_search"
+                    elif "code_interpreter" in et:
+                        tool = "code_interpreter"
+                    if tool and tool not in seen_tool:
+                        seen_tool.add(tool)
+                        fired.append(tool)
+                        yielded = True
+                        yield {"type": "tool_start", "tool": tool}
+                final = stream.get_final_response()
+            break  # 성공
+        except Exception as e:  # noqa: BLE001 — PoC: 어떤 실패든 처리
+            status = getattr(e, "status_code", None)
+            # 일시적 서버 오류(5xx)는 아직 아무것도 안 보냈을 때만 재시도(이미 토큰을 보냈으면 못 무름).
+            if (not yielded) and attempt < MAX_RETRIES and isinstance(status, int) and status >= 500:
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            print(f"[llm] stream error: {type(e).__name__}: {e} (status={status})")  # 서버 로그(항상)
+            if config.settings.dev_mode:
+                traceback.print_exc()
+                detail = f"{type(e).__name__}: {e}"
+                extra = {k: v for k, v in {
+                    "status": status, "request_id": getattr(e, "request_id", None),
+                    "code": getattr(e, "code", None), "body": getattr(e, "body", None),
+                }.items() if v}
+                if extra:
+                    detail += " | " + " ".join(f"{k}={v}" for k, v in extra.items())
+                yield {"type": "error", "message": detail}
+            else:
+                yield {"type": "error", "message": "AI 응답 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}
+            return
 
     citations = _extract_citations(final)
     u = getattr(final, "usage", None)
@@ -190,11 +218,10 @@ def stream_answer(question: str, screen_context: ScreenContext, history: list | 
     #  - 툴을 안 쓴 답은 화면 근거 → 포함
     screen_used = has_screen and ("code_interpreter" in fired or "web_search" not in fired)
     tools_used = (["screen_data"] if screen_used else []) + fired
-    yield {
-        "type": "final",
-        "tools_used": tools_used,
-        "citations": citations,
-        "trace": {
+    final_event = {"type": "final", "tools_used": tools_used, "citations": citations}
+    # trace(전체 프롬프트·페이로드)는 디버깅용 → DEV_MODE 일 때만 노출(프로덕션엔 안 보냄).
+    if config.settings.dev_mode:
+        final_event["trace"] = {
             "model": model,
             "latencyMs": int((time.perf_counter() - t0) * 1000),
             "payloadChars": len(user_payload),
@@ -206,8 +233,8 @@ def stream_answer(question: str, screen_context: ScreenContext, history: list | 
                 {"role": m["role"], "content": (m["content"][:500] + "…") if len(m["content"]) > 500 else m["content"]}
                 for m in items[:-1]
             ],
-        },
-    }
+        }
+    yield final_event
 
 
 def answer_question(question: str, screen_context: ScreenContext, history: list | None = None) -> dict:
@@ -217,13 +244,13 @@ def answer_question(question: str, screen_context: ScreenContext, history: list 
     화면 데이터는 '현재' 것만(이전 턴엔 안 실음) → 토큰 절약.
     """
     client = _get_client()
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = config.settings.openai_model
     system = SYSTEM_PROMPT.format(today=date.today().isoformat())
     data_json = json.dumps(screen_context.model_dump(), ensure_ascii=False, indent=2)
     user = f"[현재 화면 데이터]\n{data_json}\n\n[질문]\n{question}"
 
     messages = [{"role": "system", "content": system}]
-    for m in (history or [])[-8:]:  # 최근 4쌍만
+    for m in (history or [])[-config.settings.history_turns:]:  # 최근 history_turns 개
         role, content = m.get("role"), m.get("content")
         if role in ("user", "assistant") and content:
             messages.append({"role": role, "content": str(content)})
@@ -232,7 +259,7 @@ def answer_question(question: str, screen_context: ScreenContext, history: list 
     t0 = time.perf_counter()
     resp = client.chat.completions.create(
         model=model,
-        temperature=0.2,
+        temperature=config.settings.openai_temperature,
         messages=messages,
     )
     latency_ms = int((time.perf_counter() - t0) * 1000)
@@ -251,4 +278,4 @@ def answer_question(question: str, screen_context: ScreenContext, history: list 
         "system": system,   # 페이로드 전체 보기용
         "user": user,
     }
-    return {"answer": answer, "trace": trace}
+    return {"answer": answer, "trace": trace if config.settings.dev_mode else None}

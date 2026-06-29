@@ -22,8 +22,10 @@ from types import SimpleNamespace
 # 파일로 직접 실행해도 프로젝트 루트를 import 경로에 넣는다.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
-from server import llm
+from server import config, llm
 from server.schemas import ScreenContext
+
+config.settings.dev_mode = True  # trace 노출은 DEV_MODE 일 때만 → 테스트는 켜고 검증
 
 _checks: list[tuple[str, bool]] = []
 
@@ -161,6 +163,18 @@ finally:
     llm._get_client = _orig_get_client
 fin_scr = [e for e in out_scr if e["type"] == "final"][-1]
 check("툴 미호출이면 screen_data 만", fin_scr["tools_used"] == ["screen_data"])
+
+# DEV_MODE 게이트: 꺼지면 final 에 trace 미포함(프로덕션 안전), 켜지면 포함
+check("DEV_MODE on → trace 포함", "trace" in fin_scr)  # 파일 상단에서 DEV_MODE=True
+llm._get_client = lambda: SimpleNamespace(responses=SimpleNamespace(stream=lambda **kw: _FakeStream([], fake_final)))
+config.settings.dev_mode = False
+try:
+    out_nodev = list(llm.stream_answer("q", SC))
+finally:
+    config.settings.dev_mode = True
+    llm._get_client = _orig_get_client
+fin_nodev = [e for e in out_nodev if e["type"] == "final"][-1]
+check("DEV_MODE off → trace 미포함", "trace" not in fin_nodev)
 
 # 예외 → error 이벤트(사용자에게 표시)
 def _boom():

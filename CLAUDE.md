@@ -55,6 +55,7 @@ deploy/    엔터프라이즈 배포 템플릿(.crx/update.xml/ForceList)
 - 내부 데이터가 외부(OpenAI 등)로 나가는 건 거버넌스 대상 → recipe `mask`/`deny`로 통제. **마스킹은 데이터가 익스텐션(채널)을 떠나기 전에** 적용.
 - iframe ↔ side panel `postMessage`는 **origin 검증 필수**.
 - 서명키/패키지(`*.pem`, `*.crx`)·`.env`는 **커밋 금지**.
+- **테스트/디버그 전용 기능·상세 로그는 설정으로 on/off, 프로덕션 기본 off.** 개발 편의용으로 노출/실행되는 것(프롬프트·페이로드 trace, "어떻게 답했나"·"추출 영역" 같은 디버그 UI, 상세 에러·트레이스백, no-store 캐시 무력화 등)은 **`server/config.py`의 `settings`**(pydantic-settings, 타입 있는 단일 설정 진입점) — 예: `config.settings.dev_mode`(`.env`의 `UDC_DEV_MODE`) — 로 게이트한다. 새 설정은 이 `Settings` 클래스에 필드로 추가한다. 새 디버그 기능·로그를 추가할 때도 *항상 이 플래그 뒤에* 둔다(프로덕션에 그냥 노출 금지). on/off는 결정론 테스트로 고정(`tests/server/test_stream.py`).
 
 ## 6. 작업 규칙
 
