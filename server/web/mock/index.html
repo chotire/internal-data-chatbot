@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>구매시스템 (PoC 목업)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!--
+    v0.4 행동 에이전트 PoC 목업 — 사내 "구매시스템" 한 개.
+    의도적 난이도(§12): 딥링크 없는 SPA(메뉴로 내용만 교체) · 품목은 검색팝업으로만 ·
+    금액/합계 readonly 자동계산 · controlled input(정확한 input/change 이벤트에만 모델 반영).
+    레거시 무수정 가정이므로 이 페이지는 익스텐션을 전혀 모른다(순수 업무 화면).
+  -->
+  <header class="topbar">
+    <strong>구매시스템</strong>
+    <span class="env">PoC 목업 · 단일 페이지(딥링크 없음)</span>
+  </header>
+
+  <div class="layout">
+    <!-- 좌측 메뉴: 대 > 중 > 소. 클릭 시 URL 변화 없이 #content 만 교체된다. -->
+    <nav class="menu" aria-label="주메뉴">
+      <ul>
+        <li class="cat">구매
+          <ul>
+            <li class="mid">구매요청
+              <ul>
+                <li><a href="#" data-nav="pr-list">목록</a></li>
+                <li><a href="#" data-nav="pr-form">등록(신규)</a></li>
+              </ul>
+            </li>
+            <li class="mid muted">정산 <span class="todo">(미구현)</span></li>
+          </ul>
+        </li>
+        <li class="cat muted">하자 <span class="todo">(미구현 · 2번째 시스템 자리)</span></li>
+      </ul>
+    </nav>
+
+    <!-- 내용 영역: data-screen 이 "지금 어느 화면인가"의 DOM 시그니처다(도착 감지용). -->
+    <main id="content" data-screen="home"></main>
+  </div>
+
+  <!-- 품목 검색 팝업(모달). 품목은 타이핑이 막혀 있고 이 팝업으로만 고른다. -->
+  <div id="item-modal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-label="품목 검색">
+      <h3>품목 검색</h3>
+      <div class="row">
+        <input id="item-q" type="text" placeholder="예: 볼펜" />
+        <button id="item-search-btn" type="button">검색</button>
+      </div>
+      <ul id="item-results" class="results"></ul>
+      <div class="modal-actions">
+        <button id="item-cancel" type="button">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 저장 확인 모달(되돌릴 수 없는 행동 직전 사람 확인 = HITL 의 끝단). -->
+  <div id="confirm-modal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-label="저장 확인">
+      <h3>구매요청 등록</h3>
+      <p id="confirm-msg">입력한 내용으로 구매요청을 등록하시겠습니까?</p>
+      <div class="modal-actions">
+        <button id="confirm-cancel" type="button">취소</button>
+        <button id="confirm-ok" type="button" class="primary">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

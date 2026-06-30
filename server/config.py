@@ -22,8 +22,8 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
-    dev_mode: bool = Field(default=False, validation_alias="UDC_DEV_MODE")
-    openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
+    dev_mode: bool = Field(default=True, validation_alias="UDC_DEV_MODE")
+    openai_model: str = Field(default="gpt-4o", validation_alias="OPENAI_MODEL")
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
 
     # 생성 파라미터·재시도

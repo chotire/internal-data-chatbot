@@ -6,13 +6,15 @@
   <title>데이터 챗봇</title>
   <script src="https://cdn.jsdelivr.net/npm/marked@14.1.2/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/static/chat/style.css?v=5" />
+  <link rel="stylesheet" href="/static/chat/style.css?v=8" />
 </head>
 <body>
   <div class="chat-header">
     <button id="pick-btn" class="pick-btn" title="답변이 부정확하면 화면에서 데이터 영역을 직접 지정">🎯 영역 지정</button>
     <button id="pick-clear" class="pick-btn hidden" title="지정 해제">✕</button>
     <button id="hl-btn" class="pick-btn" title="화면에서 '읽은 영역'을 박스로 표시">📦 추출 영역</button>
+    <button id="act-btn" class="pick-btn" title="현재 화면의 폼을 대신 채우는 작업 지시(v0.4)">🤖 작업</button>
+    <button id="map-btn" class="pick-btn" title="메뉴를 읽기전용으로 순회해 화면·폼 지식 그래프를 적재(관리자, v0.4)">🗺️ 매핑</button>
     <button id="reset-btn" class="pick-btn" title="새 채팅 시작(대화 이력 비움)">✚ 새 채팅</button>
     <span id="status" class="status">대기</span>
   </div>
@@ -22,6 +24,6 @@
            placeholder="예) 공정이 지연된 현장은? / 공공 발주 계약 합계는?" />
     <button type="submit">전송</button>
   </form>
-  <script src="/static/chat/chat.js?v=6"></script>
+  <script src="/static/chat/chat.js?v=16"></script>
 </body>
 </html>

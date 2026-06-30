@@ -37,6 +37,15 @@ const ADAPTER_FILES = [
   "content/adapters/websquare.js",
 ];
 
+// v0.4 액션층(채널). base.js(저수준 유틸) + 별도 UDCA 네임스페이스 모듈. 폼 추출·동작 실행에 주입.
+const ACTION_FILES = [
+  "content/base.js",
+  "content/action/screen-id.js",
+  "content/action/form-extract.js",
+  "content/action/actions.js",
+  "content/action/run-plan.js",
+];
+
 // MAIN world 리더: 페이지의 JS 데이터레이어를 직접 읽는다(전체 데이터 + 컬럼정의 라벨 + 차트 인스턴스).
 // 자기완결 함수여야 함(외부 참조 금지) — executeScript({world:"MAIN"}) 로 페이지 세계에서 실행.
 function readDataLayer(hint, scope) {
@@ -371,7 +380,83 @@ async function extractFromTab(tabId, useRecipe) {
   }
 }
 
+// ── v0.4 액션: 폼 추출 / 계획 실행 (채널 런타임) ─────────────────────────
+// 대상 탭 확정(없으면 활성 탭) + 지원 도메인 확인 + 액션층 주입 후 fn 실행.
+async function runOnActionTab(tabId, fn) {
+  let id = tabId;
+  if (id == null) {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    id = tabs && tabs[0] && tabs[0].id;
+  }
+  if (id == null) return { ok: false, error: "대상 탭을 찾을 수 없습니다." };
+  let tab;
+  try { tab = await chrome.tabs.get(id); } catch (e) { return { ok: false, error: "대상 탭을 찾을 수 없습니다." }; }
+  if (!isAllowed(tab.url || "")) {
+    return { ok: false, error: "이 익스텐션이 지원하지 않는 페이지입니다. 현재 탭: " + (tab.url || "알 수 없음") };
+  }
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: id }, files: ACTION_FILES });
+    return await fn(id);
+  } catch (e) {
+    return { ok: false, error: "실행 실패: " + (e && e.message ? e.message : String(e)) };
+  }
+}
+
+async function extractFormFromTab(tabId) {
+  return runOnActionTab(tabId, async (id) => {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: id },
+      func: () => (globalThis.UDCA ? UDCA.extractForm(document.getElementById("content") || document.body) : null),
+    });
+    const formContext = res && res[0] && res[0].result;
+    if (!formContext) return { ok: false, error: "폼을 인식하지 못했습니다." };
+    return { ok: true, formContext };
+  });
+}
+
+async function mapWalkOnTab(tabId, targets) {
+  return runOnActionTab(tabId, async (id) => {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: id },
+      func: async (t) => (globalThis.UDCA ? await UDCA.mapWalk(t || null) : null),
+      args: [targets || null],
+    });
+    const observations = res && res[0] && res[0].result;
+    if (!observations) return { ok: false, error: "매핑 순회 실패" };
+    return { ok: true, observations };
+  });
+}
+
+async function runPlanOnTab(tabId, plan, opts) {
+  return runOnActionTab(tabId, async (id) => {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: id },
+      func: async (p, o) => (globalThis.UDCA ? await UDCA.runPlan(p, o || {}) : null),
+      args: [plan, opts || {}],
+    });
+    const result = res && res[0] && res[0].result;
+    if (!result) return { ok: false, error: "계획 실행에 실패했습니다(액션층 주입/실행 불가)." };
+    // 실패면 사유(어느 액션에서 멈췄나)를 위로 올린다.
+    return { ok: result.ok !== false, result, error: result.ok === false ? (result.error || "액션 실패") : undefined };
+  });
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // v0.4 폼 인식 — 현재 화면의 입력 컨트롤을 FormContext 로 추출.
+  if (msg && msg.type === "UDC_EXTRACT_FORM") {
+    extractFormFromTab(msg.tabId).then(sendResponse);
+    return true;
+  }
+  // v0.4 계획 실행 — 서버가 만든 fill-plan 을 페이지에서 실행(채움·저장 클릭).
+  if (msg && msg.type === "UDC_RUN_PLAN") {
+    runPlanOnTab(msg.tabId, msg.plan, { commitSave: msg.commitSave, resolutions: msg.resolutions }).then(sendResponse);
+    return true;
+  }
+  // v0.4 매핑 모드 — 메뉴를 읽기전용으로 순회해 화면·폼 관찰을 수집.
+  if (msg && msg.type === "UDC_MAP_WALK") {
+    mapWalkOnTab(msg.tabId, msg.targets).then(sendResponse);
+    return true;
+  }
   // picker: 활성 탭에 오버레이 주입 → 사용자가 클릭한 영역 셀렉터 저장
   if (msg && msg.type === "UDC_PICK") {
     (async () => {

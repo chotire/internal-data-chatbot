@@ -136,7 +136,7 @@ def _extract_citations(final) -> list[dict]:
 
 
 def stream_answer(question: str, screen_context: ScreenContext, history: list | None = None):
-    """이벤트 제너레이터. v0.3 이음매 계약(docs/architecture/v0.3-direction.md §6)과 동일한 모양:
+    """이벤트 제너레이터. v0.3 이음매 규약(docs/architecture/v0.3-direction.md §6)과 동일한 모양:
       {"type":"tool_start","tool":...} | {"type":"token","text":...}
       {"type":"final","tools_used":[...],"citations":[...],"trace":{...}} | {"type":"error","message":...}
     """

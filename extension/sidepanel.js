@@ -39,6 +39,60 @@ window.addEventListener("message", (e) => {
     });
     return;
   }
+  // v0.4 폼 인식 요청 → background 가 FormContext 추출 → iframe 으로 반환
+  if (msg && msg.type === "UDC_REQUEST_FORM") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs && tabs[0] && tabs[0].id;
+      chrome.runtime.sendMessage({ type: "UDC_EXTRACT_FORM", tabId }, (resp) => {
+        iframe.contentWindow.postMessage(
+          {
+            type: "UDC_FORM", requestId: msg.requestId,
+            ok: !!(resp && resp.ok), formContext: resp && resp.formContext,
+            error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message),
+          },
+          SERVER_ORIGIN
+        );
+      });
+    });
+    return;
+  }
+  // v0.4 계획 실행 요청 → background 가 페이지에서 fill-plan 실행 → 결과 반환
+  if (msg && msg.type === "UDC_RUN_PLAN") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs && tabs[0] && tabs[0].id;
+      chrome.runtime.sendMessage(
+        { type: "UDC_RUN_PLAN", tabId, plan: msg.plan, commitSave: msg.commitSave, resolutions: msg.resolutions },
+        (resp) => {
+          iframe.contentWindow.postMessage(
+            {
+              type: "UDC_RUN_RESULT", requestId: msg.requestId,
+              ok: !!(resp && resp.ok), result: resp && resp.result,
+              error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message),
+            },
+            SERVER_ORIGIN
+          );
+        }
+      );
+    });
+    return;
+  }
+  // v0.4 매핑 모드 요청 → background 가 메뉴 순회 관찰 수집 → iframe 으로 반환
+  if (msg && msg.type === "UDC_REQUEST_MAP") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs && tabs[0] && tabs[0].id;
+      chrome.runtime.sendMessage({ type: "UDC_MAP_WALK", tabId, targets: msg.targets }, (resp) => {
+        iframe.contentWindow.postMessage(
+          {
+            type: "UDC_MAP", requestId: msg.requestId,
+            ok: !!(resp && resp.ok), observations: resp && resp.observations,
+            error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message),
+          },
+          SERVER_ORIGIN
+        );
+      });
+    });
+    return;
+  }
   if (msg && msg.type === "UDC_REQUEST_SCREEN") {
     // 이 사이드패널이 속한 창의 활성 탭을 추출 대상으로 지정 (다른 탭/창 영향 배제)
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

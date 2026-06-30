@@ -30,7 +30,7 @@ tests/
     └── test_recipes.py     # 서버측 단독 파이썬 테스트(종료코드)
 ```
 
-## 스위트 계약
+## 스위트 규약
 
 `suites/<id>.mjs` 가 객체를 **default export**:
 
@@ -53,7 +53,7 @@ export default {
 
 ## 스위트 추가 방법
 
-1. `tests/suites/<id>.mjs` 작성(위 계약). 케이스마다 `id/name/expect` 와 판정 로직.
+1. `tests/suites/<id>.mjs` 작성(위 규약). 케이스마다 `id/name/expect` 와 판정 로직.
 2. `tests/run.mjs` 의 `SUITES` 배열에 import 후 등록.
 3. `node tests/run.mjs <id>` 로 단독 확인 → `npm test` 로 전체.
 

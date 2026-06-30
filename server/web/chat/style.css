@@ -88,6 +88,41 @@ body {
   border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
 .trace-dl:hover { border-color: var(--accent); }
 
+/* v0.4 행동 모드: 작업 버튼 활성 + fill-plan 미리보기 카드 */
+.pick-btn.active { background: rgba(59,130,246,0.2); border-color: var(--accent); color: #fff; }
+.plan-card { font-size: 13px; }
+.plan-title { font-weight: 600; color: #fff; margin-bottom: 6px; }
+.plan-items { margin: 4px 0; padding-left: 18px; }
+.plan-items li { margin: 3px 0; }
+.plan-items .flag { font-size: 10px; background: rgba(245,158,11,0.18); border: 1px solid #f59e0b;
+  border-radius: 6px; padding: 0 5px; color: #fbbf24; }
+.plan-warn { color: #fca5a5; margin: 6px 0; }
+.plan-gate { color: #fbbf24; margin: 6px 0; }
+.plan-actions { display: flex; gap: 6px; margin-top: 8px; }
+.plan-btn { font-size: 12px; border-radius: 6px; padding: 4px 10px; cursor: pointer;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.plan-btn:hover { border-color: var(--accent); }
+.plan-btn.commit { background: var(--accent); color: #fff; border-color: var(--accent); }
+.plan-btn:disabled { opacity: 0.5; cursor: default; }
+.plan-result { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.plan-result.ok { color: #6ee7b7; }
+.plan-result.err { color: #fca5a5; }
+.plan-picks { color: var(--text-dim); margin-bottom: 4px; font-size: 12px; }
+.plan-kind { font-size: 11px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1px 6px; color: var(--text-dim); font-weight: 400; }
+.plan-nav { color: var(--text-dim); margin: 4px 0; font-size: 12px; }
+.plan-read { color: #93c5fd; margin: 4px 0; font-size: 12px; }
+.plan-btn.danger { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+.plan-btn.danger:hover { background: #991b1b; }
+.read-table { border-collapse: collapse; margin: 6px 0; font-size: 12px; width: 100%; }
+.read-table th, .read-table td { border: 1px solid var(--border); padding: 3px 6px; text-align: left; color: var(--text); }
+.read-table th { background: var(--surface); }
+.plan-steps { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px; }
+.plan-steps > summary { cursor: pointer; font-size: 11px; color: var(--text-dim); }
+.plan-steps ul { margin: 6px 0 0; padding-left: 8px; list-style: none; }
+.plan-steps li { margin: 3px 0; font-size: 12px; color: var(--text); }
+.plan-steps .step-err { color: #fca5a5; }
+
 #chat-form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); flex: 0 0 auto; }
 #chat-input { flex: 1; padding: 10px; border: 1px solid var(--border);
   border-radius: 8px; font-size: 14px; background: var(--surface-2); color: var(--text); }

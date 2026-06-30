@@ -31,3 +31,7 @@ tests/package-lock.json
 playwright-report/
 test-results/
 coverage/
+
+# v0.4 런타임 산출물(매핑 그래프·에이전트 메모리) — 커밋 금지
+server/data/site-graph.live.json
+server/data/memory.json

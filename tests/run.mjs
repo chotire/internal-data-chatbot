@@ -9,9 +9,13 @@ import { runAll } from "./lib/runner.mjs";
 import recipeSchema from "./suites/recipe-schema.mjs";
 import serverRecipe from "./suites/server-recipe.mjs";
 import serverStream from "./suites/server-stream.mjs";
+import serverPlan from "./suites/server-plan.mjs";
 import coreExtract from "./suites/core-extract.mjs";
+import mockFormExtract from "./suites/mock-form-extract.mjs";
+import actionPrimitives from "./suites/action-primitives.mjs";
+import actionRunplan from "./suites/action-runplan.mjs";
 
-const SUITES = [serverRecipe, serverStream, coreExtract, recipeSchema];
+const SUITES = [serverRecipe, serverStream, serverPlan, coreExtract, recipeSchema, mockFormExtract, actionPrimitives, actionRunplan];
 
 const filter = process.argv.slice(2);
 const suites = filter.length ? SUITES.filter((s) => filter.includes(s.id)) : SUITES;

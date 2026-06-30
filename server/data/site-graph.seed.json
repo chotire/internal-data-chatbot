@@ -1,0 +1,24 @@
+{
+  "_comment": "v0.4 PoC 사이트 그래프 시드 — 목업(구매시스템)의 화면·이동·폼스키마. FileGraphStore 가 읽는다. 1단계에선 골격(조회·경로질의 검증)만 쓴다.",
+  "nodes": [
+    { "id": "home", "kind": "screen", "title": "홈", "signature": { "screen": "home" } },
+    { "id": "pr-list", "kind": "screen", "title": "구매요청 목록", "signature": { "screen": "pr-list" } },
+    {
+      "id": "pr-form", "kind": "form", "title": "구매요청 등록", "signature": { "screen": "pr-form" },
+      "formSchema": {
+        "screen_id": "pr-form",
+        "fields": [
+          { "key": "#f-title", "label": "요청제목", "role": "text", "required": true },
+          { "key": "#f-dept", "label": "부서", "role": "select", "required": true, "options": ["총무팀", "구매팀", "연구개발팀"] },
+          { "key": "#f-due", "label": "납기일", "role": "date", "required": true }
+        ],
+        "line_grid": { "key": "#line-grid", "columns": ["품목", "수량", "단가", "금액"], "addRowBtn": "#add-line", "itemSearch": true }
+      }
+    }
+  ],
+  "edges": [
+    { "from": "home", "to": "pr-list", "actions": [{ "op": "click", "target": "[data-nav=\"pr-list\"]", "label": "구매 > 구매요청 > 목록" }] },
+    { "from": "home", "to": "pr-form", "actions": [{ "op": "click", "target": "[data-nav=\"pr-form\"]", "label": "구매 > 구매요청 > 등록" }] },
+    { "from": "pr-list", "to": "pr-form", "actions": [{ "op": "click", "target": "[data-nav=\"pr-form\"]", "label": "신규등록" }] }
+  ]
+}

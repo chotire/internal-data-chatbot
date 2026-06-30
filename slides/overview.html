@@ -29,7 +29,53 @@
     </div>
   </section>
 
-  <!-- 2. 개요 -->
+  <!-- 2. 제품 로드맵 -->
+  <section class="slide">
+    <div class="kicker">제품 로드맵 · v0.2 → v0.6</div>
+    <h2>화면을 <span class="em">읽는</span> 챗봇에서 <span class="grad">스스로 일하는 에이전트</span>로</h2>
+    <div class="rmap">
+      <div class="row">
+        <div class="ver">v0.2</div>
+        <div>
+          <h3>화면 인지 <span class="tag good">완료</span></h3>
+          <p>익스텐션이 레거시 화면의 표·차트·카드를 추출해 <b>"보이는 데이터만 근거로"</b> 응답. 플러그러블 어댑터 + MAIN world 데이터레이어.</p>
+        </div>
+      </div>
+      <div class="row now">
+        <div class="ver">v0.3</div>
+        <div>
+          <h3>툴 도입 <span class="tag">현재</span></h3>
+          <p>LLM <b>툴-콜링 + 스트리밍</b>. 화면 분석(code_interpreter)·웹 검색(web_search)을 질문에 따라 골라 씀. <b>도구/출처</b> 표기.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="ver">v0.4</div>
+        <div>
+          <h3>업무 자동화 · Human-in-the-Loop <span class="tag warn">예정</span></h3>
+          <p>구매·하자 등 사내 시스템에 <b>등록·변경을 에이전트가 수행</b>. 기존 데이터·선례를 베이스로 폼을 채우고, 바뀌는 부분만 HITL로 확인. 실행은 <b>UI 자동화 또는 MCP/API</b>.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="ver">v0.5</div>
+        <div>
+          <h3>사내 지식 검색 <span class="tag warn">예정</span></h3>
+          <p>화면 밖 답을 <b>사내 문서·지식(RAG)</b>에서. "화면 데이터 vs 사내 지식"을 구분·조합하고, <b>권한 필터 + 출처 인용</b>으로 통제.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="ver">v0.6</div>
+        <div>
+          <h3>자기개선 에이전트 · Agent Memory <span class="tag warn">예정</span></h3>
+          <p>에이전트가 과거 해결 경험을 <b>메모리로 축적</b>해, 스스로 문제를 풀고 시도-피드백으로 <b>성능을 개선</b>하는 시스템.</p>
+        </div>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1.3rem;">
+      v0.4↑부터는 점차 <b>AI 서비스(LangGraph 두뇌)</b>의 영역 — 익스텐션은 <b>채널</b>, 행동·지식·기억은 <b>두뇌</b>가 담당.
+    </div>
+  </section>
+
+  <!-- 3. 개요 -->
   <section class="slide">
     <div class="kicker">무엇을 만드는가</div>
     <h2>"화면에 떠 있는 데이터"만 <span class="em">근거</span>로 응답</h2>
@@ -416,52 +462,6 @@
       <li><b>사용자 수동 검증</b>: 브라우저 내 익스텐션 동작은 헤드리스 검증 불가</li>
     </ul>
   </section>
-
-  <section class="slide">
-    <div class="kicker">제품 로드맵 · v0.2 → v0.6</div>
-    <h2>화면을 <span class="em">읽는</span> 챗봇에서 <span class="grad">스스로 일하는 에이전트</span>로</h2>
-    <div class="rmap">
-      <div class="row">
-        <div class="ver">v0.2</div>
-        <div>
-          <h3>화면 인지 <span class="tag good">완료</span></h3>
-          <p>익스텐션이 레거시 화면의 표·차트·카드를 추출해 <b>"보이는 데이터만 근거로"</b> 응답. 플러그러블 어댑터 + MAIN world 데이터레이어.</p>
-        </div>
-      </div>
-      <div class="row now">
-        <div class="ver">v0.3</div>
-        <div>
-          <h3>툴 도입 <span class="tag">현재</span></h3>
-          <p>LLM <b>툴-콜링 + 스트리밍</b>. 화면 분석(code_interpreter)·웹 검색(web_search)을 질문에 따라 골라 씀. <b>도구/출처</b> 표기.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="ver">v0.4</div>
-        <div>
-          <h3>업무 자동화 · Human-in-the-Loop <span class="tag warn">예정</span></h3>
-          <p>구매·하자 등 사내 시스템에 <b>등록·변경을 에이전트가 수행</b>. 기존 데이터·선례를 베이스로 폼을 채우고, 바뀌는 부분만 HITL로 확인. 실행은 <b>UI 자동화 또는 MCP/API</b>.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="ver">v0.5</div>
-        <div>
-          <h3>사내 지식 검색 <span class="tag warn">예정</span></h3>
-          <p>화면 밖 답을 <b>사내 문서·지식(RAG)</b>에서. "화면 데이터 vs 사내 지식"을 구분·조합하고, <b>권한 필터 + 출처 인용</b>으로 통제.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="ver">v0.6</div>
-        <div>
-          <h3>자기개선 에이전트 · Agent Memory <span class="tag warn">예정</span></h3>
-          <p>에이전트가 과거 해결 경험을 <b>메모리로 축적</b>해, 스스로 문제를 풀고 시도-피드백으로 <b>성능을 개선</b>하는 시스템.</p>
-        </div>
-      </div>
-    </div>
-    <div class="callout" style="margin-top:1.3rem;">
-      v0.4↑부터는 점차 <b>AI 서비스(LangGraph 두뇌)</b>의 영역 — 익스텐션은 <b>채널</b>, 행동·지식·기억은 <b>두뇌</b>가 담당.
-    </div>
-  </section>
-
 
 </div>
 

@@ -15,7 +15,7 @@
 
 ---
 
-## 2. 데이터 계약 (서버 — `server/schemas.py`)
+## 2. 데이터 규약 (서버 — `server/schemas.py`)
 
 기존 `Recipe`는 dict로 통과했음 → Pydantic 모델로 명시(검증·문서화).
 

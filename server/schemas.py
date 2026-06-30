@@ -1,10 +1,10 @@
 """데이터 표준 규격서 (Pydantic 모델).
 
-이 파일은 "오가는 데이터가 어떤 형태여야 하는가"를 한곳에 못 박는 **계약(contract)** 이다.
+이 파일은 "오가는 데이터가 어떤 형태여야 하는가"를 한곳에 못 박는 **규약(contract)** 이다.
 실제 데이터가 아니라 *틀*이며, FastAPI/Pydantic 이 들어오고 나가는 데이터를 이 틀로 자동 검증한다.
 
 크게 두 묶음:
-  1) ScreenContext 계약  — 익스텐션의 모든 어댑터가 이 형태로 변환해 보내고, 서버·LLM 은 이 형태만 다룬다.
+  1) ScreenContext 규약  — 익스텐션의 모든 어댑터가 이 형태로 변환해 보내고, 서버·LLM 은 이 형태만 다룬다.
                            "화면이 무엇이든 뒷단은 동일"의 기준점. (CLAUDE.md §6 과 동일)
   2) Recipe 스키마       — recipes.jsonc(데이터)을 검증하는 틀. recipes.py 가 이 모델로 각 항목을 검증한다.
 
@@ -44,7 +44,7 @@ from pydantic import BaseModel, Field
 ColumnType = Literal["string", "number", "date"]
 
 
-# ── 1) ScreenContext 계약 ──────────────────────────────────────────────
+# ── 1) ScreenContext 규약 ──────────────────────────────────────────────
 
 class Column(BaseModel):
     """표의 컬럼 정의(= 한 열의 의미). 예: {"key":"c3","label":"누적기성액","type":"number","unit":"백만원"}"""
@@ -178,7 +178,7 @@ class ChatRequest(BaseModel):
     """POST /api/chat 요청 본문."""
 
     question: str                    # 사용자 질문
-    screen_context: ScreenContext    # 익스텐션이 추출한 현재 화면 데이터(위 계약)
+    screen_context: ScreenContext    # 익스텐션이 추출한 현재 화면 데이터(위 규약)
     # 이전 대화(텍스트 Q&A만). 각 항목 {role: "user"|"assistant", content: str}
     history: list[dict[str, Any]] = Field(default_factory=list)
 
